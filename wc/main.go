@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -10,11 +11,13 @@ import (
 var showBytes bool
 var showNumOfLines bool
 var showNumOfWords bool
+var showNumOfChars bool
 
 func init() {
 	flag.BoolVar(&showBytes, "c", false, "outputs the number of bytes")
 	flag.BoolVar(&showNumOfLines, "l", false, "outputs the number of lines")
 	flag.BoolVar(&showNumOfWords, "w", false, "outputs the number of words")
+	flag.BoolVar(&showNumOfChars, "m", false, "outputs the number of characters")
 	flag.Parse()
 }
 
@@ -55,6 +58,11 @@ func main() {
 		output += fmt.Sprintf("%d ", fileNumOfWords)
 	}
 
+	if showNumOfChars {
+		fileNumOfChars := calculateNumOfChars(file)
+		output += fmt.Sprintf("%d ", fileNumOfChars)
+	}
+
 	output += fmt.Sprintf("%v", fileName)
 
 	fmt.Println(output)
@@ -68,6 +76,8 @@ func throwErr(errMsg string, err error) {
 func calculateNumOfLines(file *os.File) int {
 	numOfLines := 0
 	content, _ := io.ReadAll(file)
+	defer file.Seek(0, io.SeekStart)
+
 	for _, value := range content {
 		if value == '\n' {
 			numOfLines += 1
@@ -78,10 +88,25 @@ func calculateNumOfLines(file *os.File) int {
 
 func calculateNumOfWords(file *os.File) int {
 	numOfWords := 0
-	content, _ := io.ReadAll(file)
+	defer file.Seek(0, io.SeekStart)
 
-	for range string(content) {
-		numOfWords += 1
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+
+	for scanner.Scan() {
+		numOfWords++
 	}
 	return numOfWords
+}
+
+func calculateNumOfChars(file *os.File) int {
+	numOfChars := 0
+
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanRunes)
+
+	for scanner.Scan() {
+		numOfChars++
+	}
+	return numOfChars
 }
