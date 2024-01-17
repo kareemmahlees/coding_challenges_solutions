@@ -22,10 +22,14 @@ func init() {
 }
 
 func main() {
+	var filePath string
 	if len(flag.Args()) == 0 {
-		throwErr("A file path argument must be passed", nil)
+		fmt.Scan(&filePath)
+		// throwErr("A file path argument must be passed", nil)
+	} else {
+		filePath = flag.Arg(0)
 	}
-	file, err := os.Open(flag.Arg(0))
+	file, err := os.Open(filePath)
 
 	// make sure to close the file at the end
 	defer func() {
@@ -39,31 +43,29 @@ func main() {
 	}
 
 	stats, _ := file.Stat()
-	fileName := stats.Name()
 
 	output := ""
 
-	if showBytes {
-		fileSizeBytes := stats.Size()
-		output += fmt.Sprintf("%d ", fileSizeBytes)
+	switch {
+	case showBytes:
+		output += fmt.Sprintf("%d ", stats.Size())
+		fallthrough
+
+	case showNumOfLines:
+		output += fmt.Sprintf("%d ", calculateNumOfLines(file))
+		fallthrough
+
+	case showNumOfWords:
+		output += fmt.Sprintf("%d ", calculateNumOfWords(file))
+		fallthrough
+
+	case showNumOfChars:
+		output += fmt.Sprintf("%d ", calculateNumOfChars(file))
+	default:
+		output += fmt.Sprintf("%d %d %d %d ", stats.Size(), calculateNumOfLines(file), calculateNumOfWords(file), calculateNumOfChars(file))
 	}
 
-	if showNumOfLines {
-		fileNumOfLines := calculateNumOfLines(file)
-		output += fmt.Sprintf("%d ", fileNumOfLines)
-	}
-
-	if showNumOfWords {
-		fileNumOfWords := calculateNumOfWords(file)
-		output += fmt.Sprintf("%d ", fileNumOfWords)
-	}
-
-	if showNumOfChars {
-		fileNumOfChars := calculateNumOfChars(file)
-		output += fmt.Sprintf("%d ", fileNumOfChars)
-	}
-
-	output += fmt.Sprintf("%v", fileName)
+	output += fmt.Sprintf("%v", stats.Name())
 
 	fmt.Println(output)
 }
@@ -74,22 +76,21 @@ func throwErr(errMsg string, err error) {
 }
 
 func calculateNumOfLines(file *os.File) int {
-	numOfLines := 0
-	content, _ := io.ReadAll(file)
 	defer file.Seek(0, io.SeekStart)
 
-	for _, value := range content {
-		if value == '\n' {
-			numOfLines += 1
-		}
+	numOfLines := 0
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		numOfLines++
 	}
 	return numOfLines
 }
 
 func calculateNumOfWords(file *os.File) int {
-	numOfWords := 0
 	defer file.Seek(0, io.SeekStart)
 
+	numOfWords := 0
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanWords)
 
