@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -22,50 +23,57 @@ func init() {
 }
 
 func main() {
-	var filePath string
+	var reader io.ReadSeeker
+	var fileName string
+
 	if len(flag.Args()) == 0 {
-		fmt.Scan(&filePath)
-		// throwErr("A file path argument must be passed", nil)
+		b, _ := io.ReadAll(os.Stdin)
+		reader = bytes.NewReader(b)
 	} else {
-		filePath = flag.Arg(0)
-	}
-	file, err := os.Open(filePath)
+		filePath := flag.Arg(0)
+		file, err := os.Open(filePath)
 
-	// make sure to close the file at the end
-	defer func() {
-		if err = file.Close(); err != nil {
-			throwErr("Error while closing file: ", err)
+		// make sure to close the file at the end
+		defer func() {
+			if err = file.Close(); err != nil {
+				throwErr("Error while closing file: ", err)
+			}
+		}()
+
+		if err != nil {
+			throwErr("Error opening the specified file: ", err)
 		}
-	}()
 
-	if err != nil {
-		throwErr("Error opening the specified file: ", err)
+		reader = file
+		fileStat, _ := file.Stat()
+		fileName = fileStat.Name()
 	}
-
-	stats, _ := file.Stat()
 
 	output := ""
 
-	switch {
-	case showBytes:
-		output += fmt.Sprintf("%d ", stats.Size())
-		fallthrough
-
-	case showNumOfLines:
-		output += fmt.Sprintf("%d ", calculateNumOfLines(file))
-		fallthrough
-
-	case showNumOfWords:
-		output += fmt.Sprintf("%d ", calculateNumOfWords(file))
-		fallthrough
-
-	case showNumOfChars:
-		output += fmt.Sprintf("%d ", calculateNumOfChars(file))
-	default:
-		output += fmt.Sprintf("%d %d %d %d ", stats.Size(), calculateNumOfLines(file), calculateNumOfWords(file), calculateNumOfChars(file))
+	if showBytes {
+		output += fmt.Sprintf("%d ", calculateSize(reader))
 	}
 
-	output += fmt.Sprintf("%v", stats.Name())
+	if showNumOfLines {
+		output += fmt.Sprintf("%d ", calculateNumOfLines(reader))
+	}
+
+	if showNumOfWords {
+		output += fmt.Sprintf("%d ", calculateNumOfWords(reader))
+	}
+
+	if showNumOfChars {
+		output += fmt.Sprintf("%d ", calculateNumOfChars(reader))
+	}
+
+	if !showBytes && !showNumOfLines && !showNumOfWords && !showNumOfChars {
+		output += fmt.Sprintf("%d %d %d ", calculateSize(reader), calculateNumOfLines(reader), calculateNumOfWords(reader))
+	}
+
+	if fileName != "" {
+		output += fmt.Sprintf("%v", fileName)
+	}
 
 	fmt.Println(output)
 }
@@ -75,11 +83,20 @@ func throwErr(errMsg string, err error) {
 	os.Exit(1)
 }
 
-func calculateNumOfLines(file *os.File) int {
-	defer file.Seek(0, io.SeekStart)
+func calculateSize(reader io.ReadSeeker) int64 {
+	defer reader.Seek(0, io.SeekStart)
+
+	buf := &bytes.Buffer{}
+	nRead, _ := io.Copy(buf, reader)
+
+	return nRead
+}
+
+func calculateNumOfLines(reader io.ReadSeeker) int {
+	defer reader.Seek(0, io.SeekStart)
 
 	numOfLines := 0
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
 		numOfLines++
@@ -87,11 +104,11 @@ func calculateNumOfLines(file *os.File) int {
 	return numOfLines
 }
 
-func calculateNumOfWords(file *os.File) int {
-	defer file.Seek(0, io.SeekStart)
+func calculateNumOfWords(reader io.ReadSeeker) int {
+	defer reader.Seek(0, io.SeekStart)
 
 	numOfWords := 0
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(reader)
 	scanner.Split(bufio.ScanWords)
 
 	for scanner.Scan() {
@@ -100,10 +117,11 @@ func calculateNumOfWords(file *os.File) int {
 	return numOfWords
 }
 
-func calculateNumOfChars(file *os.File) int {
-	numOfChars := 0
+func calculateNumOfChars(reader io.ReadSeeker) int {
+	defer reader.Seek(0, io.SeekStart)
 
-	scanner := bufio.NewScanner(file)
+	numOfChars := 0
+	scanner := bufio.NewScanner(reader)
 	scanner.Split(bufio.ScanRunes)
 
 	for scanner.Scan() {
