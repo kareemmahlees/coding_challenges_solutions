@@ -1,14 +1,18 @@
 use std::{iter::Peekable, str::Chars};
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
     LBraces,
     RBraces,
     Literal(String),
+    Number(usize),
     Colon,
     Coma,
+    Null,
+    True,
+    False,
 }
 
 impl Token {
@@ -17,8 +21,12 @@ impl Token {
             Token::LBraces => String::from("{"),
             Token::RBraces => String::from("}"),
             Token::Literal(s) => s.clone(),
+            Token::Number(n) => n.to_string(),
             Token::Colon => String::from(":"),
             Token::Coma => String::from(","),
+            Token::Null => String::from("null"),
+            Token::True => String::from("true"),
+            Token::False => String::from("false"),
         }
     }
 }
@@ -90,11 +98,6 @@ impl<'a> Lexer<'a> {
         ch
     }
 
-    /// Peak ahead into the input.
-    fn peek(&mut self) -> Option<char> {
-        self.input.peek().copied()
-    }
-
     /// Read string between double quotes.
     ///
     /// ## Errors
@@ -121,7 +124,112 @@ impl<'a> Lexer<'a> {
         Ok(Token::Literal(s))
     }
 
-    /// Prase "key":"value".
+    fn read_number(&mut self, initial_char: char) -> Result<Token> {
+        let mut s = String::from(initial_char);
+        let mut ended = false;
+
+        for c in self.input.by_ref() {
+            if is_number(c) {
+                s.push(c);
+            } else {
+                ended = true;
+                break;
+            }
+        }
+
+        if !ended {
+            anyhow::bail!("Unterminated number at line: {}", self.line);
+        }
+
+        // TODO handle parse error
+        Ok(Token::Number(s.parse::<usize>().unwrap()))
+    }
+
+    fn read_null(&mut self) -> Result<Token> {
+        // we start with 'n' because we are already at it and any further read will advance the cursor away from it.
+        let mut null = String::from("n");
+        let mut ended = false;
+
+        for c in self.input.by_ref() {
+            match c {
+                ',' => {
+                    ended = true;
+                    break;
+                }
+                ch => null.push(ch),
+            }
+        }
+
+        if !ended {
+            anyhow::bail!("Unterminated Identifier, expected comma")
+        }
+
+        anyhow::ensure!(
+            null == Token::Null.literal(),
+            "Invalid identifier: {}, Maybe you mean 'null'?",
+            null
+        );
+
+        Ok(Token::Null)
+    }
+
+    fn read_boolean_true(&mut self) -> Result<Token> {
+        // we start with 'n' because we are already at it and any further read will advance the cursor away from it.
+        let mut true_literal = String::from("t");
+        let mut ended = false;
+
+        for c in self.input.by_ref() {
+            match c {
+                ',' => {
+                    ended = true;
+                    break;
+                }
+                ch => true_literal.push(ch),
+            }
+        }
+
+        if !ended {
+            anyhow::bail!("Unterminated Identifier, expected comma")
+        }
+
+        anyhow::ensure!(
+            true_literal == Token::True.literal(),
+            "Invalid identifier: {}, Maybe you mean 'true'?",
+            true_literal
+        );
+
+        Ok(Token::True)
+    }
+
+    fn read_boolean_false(&mut self) -> Result<Token> {
+        // we start with 'n' because we are already at it and any further read will advance the cursor away from it.
+        let mut false_literal = String::from("f");
+        let mut ended = false;
+
+        for c in self.input.by_ref() {
+            match c {
+                ',' => {
+                    ended = true;
+                    break;
+                }
+                ch => false_literal.push(ch),
+            }
+        }
+
+        if !ended {
+            anyhow::bail!("Unterminated Identifier, expected comma")
+        }
+
+        anyhow::ensure!(
+            false_literal == Token::False.literal(),
+            "Invalid identifier: {}, Maybe you mean 'false'?",
+            false_literal
+        );
+
+        Ok(Token::False)
+    }
+
+    /// Parse "key":"value".
     fn parse_kv(&mut self) -> Result<Vec<Token>> {
         let mut tokens = Vec::<Token>::new();
 
@@ -142,20 +250,28 @@ impl<'a> Lexer<'a> {
         // Parse Value.
         if let Some(char) = self.read() {
             match char {
-                '"' => {
-                    let literal = self.read_string()?;
-                    tokens.push(literal);
+                '"' => tokens.push(self.read_string()?),
+                'n' => tokens.push(self.read_null()?),
+                't' => tokens.push(self.read_boolean_true()?),
+                'f' => tokens.push(self.read_boolean_false()?),
+                c => {
+                    if is_number(c) {
+                        tokens.push(self.read_number(c)?);
+                    } else {
+                        anyhow::bail!(
+                            "Invalid expression at line {}, Expected 'value'.",
+                            self.line
+                        );
+                    }
                 }
-                // parse other data types
-                _ => todo!(),
-            };
-        } else {
-            anyhow::bail!(
-                "Invalid expression at line {}, Expected 'value'.",
-                self.line
-            )
-        }
+            }
+        };
         Ok(tokens)
+    }
+
+    /// Peak ahead into the input.
+    fn peek(&mut self) -> Option<char> {
+        self.input.peek().copied()
     }
 }
 
@@ -166,4 +282,8 @@ fn is_newline(char: char) -> bool {
 
 fn is_whitespace(char: char) -> bool {
     char == ' '
+}
+
+fn is_number(char: char) -> bool {
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].contains(&char)
 }
