@@ -11,22 +11,6 @@ impl<'a> Lexer<'a> {
     fn parse_kv(&mut self) -> Result<Vec<Token>, LexError> {
         let mut tokens = Vec::<Token>::new();
 
-        loop {
-            if let Some(ch) = self.peek() {
-                if is_newline(ch) {
-                    self.line += 1;
-                    self.read();
-                    continue;
-                }
-                if is_whitespace(ch) {
-                    self.read();
-                    continue;
-                }
-                break;
-            }
-            break;
-        }
-
         // Parse key.
         let key = self.read_string()?;
         tokens.push(key);
@@ -235,20 +219,23 @@ impl<'a> Lexer<'a> {
 
     /// Strip newline and whitespace and return the next valid char.
     fn read(&mut self) -> Option<char> {
-        let mut ch: Option<char> = None;
-
-        for char in self.input.by_ref() {
-            if is_newline(char) {
-                self.line += 1;
-                continue;
-            } else if is_whitespace(char) {
-                continue;
-            } else {
-                ch = Some(char);
+        loop {
+            if let Some(ch) = self.peek() {
+                if is_newline(ch) {
+                    self.line += 1;
+                    self.input.next();
+                    continue;
+                }
+                if is_whitespace(ch) {
+                    self.input.next();
+                    continue;
+                }
                 break;
             }
+            break;
         }
-        ch
+
+        self.input.next()
     }
 
     /// Peak ahead into the input.

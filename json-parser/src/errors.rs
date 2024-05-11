@@ -36,9 +36,6 @@ pub(crate) enum LexError {
     #[error("[line {line:?}] Unterminated number.")]
     UnterminatedNumber { line: i16 },
 
-    #[error("[line {line:?}] Unterminated Object, Expected }}.")]
-    UnterminatedObject { line: i16 },
-
     #[error("[line {line:?}] Unterminated Array, Expected ].")]
     UnterminatedArray { line: i16 },
 }
