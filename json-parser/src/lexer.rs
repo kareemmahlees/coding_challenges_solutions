@@ -8,6 +8,8 @@ pub enum Token {
     RBraces,
     Literal(String),
     Number(usize),
+    Object,
+    Array,
     Colon,
     Coma,
     Null,
@@ -22,6 +24,8 @@ impl Token {
             Token::RBraces => String::from("}"),
             Token::Literal(s) => s.clone(),
             Token::Number(n) => n.to_string(),
+            Token::Object => String::from("{{}}"),
+            Token::Array => String::from("[]"),
             Token::Colon => String::from(":"),
             Token::Coma => String::from(","),
             Token::Null => String::from("null"),
@@ -96,6 +100,48 @@ impl<'a> Lexer<'a> {
             }
         }
         ch
+    }
+
+    /// Parse "key":"value".
+    fn parse_kv(&mut self) -> Result<Vec<Token>> {
+        let mut tokens = Vec::<Token>::new();
+
+        // Parse key.
+        let key = self.read_string()?;
+        tokens.push(key);
+
+        // Parse Colon.
+        if self
+            .read()
+            .is_some_and(|c| c.to_string() == Token::Colon.literal())
+        {
+            tokens.push(Token::Colon);
+        } else {
+            anyhow::bail!("Invalid expression at line {}, Expected ':'.", self.line)
+        };
+
+        // Parse Value.
+        if let Some(char) = self.read() {
+            match char {
+                '"' => tokens.push(self.read_string()?),
+                'n' => tokens.push(self.read_null()?),
+                't' => tokens.push(self.read_boolean_true()?),
+                'f' => tokens.push(self.read_boolean_false()?),
+                '{' => tokens.push(self.read_object()?),
+                '[' => tokens.push(self.read_array()?),
+                c => {
+                    if is_number(c) {
+                        tokens.push(self.read_number(c)?);
+                    } else {
+                        anyhow::bail!(
+                            "Invalid expression at line {}, Expected 'value'.",
+                            self.line
+                        );
+                    }
+                }
+            }
+        };
+        Ok(tokens)
     }
 
     /// Read string between double quotes.
@@ -229,44 +275,44 @@ impl<'a> Lexer<'a> {
         Ok(Token::False)
     }
 
-    /// Parse "key":"value".
-    fn parse_kv(&mut self) -> Result<Vec<Token>> {
-        let mut tokens = Vec::<Token>::new();
+    fn read_object(&mut self) -> Result<Token> {
+        let mut ended = true;
 
-        // Parse key.
-        let key = self.read_string()?;
-        tokens.push(key);
-
-        // Parse Colon.
-        if self
-            .read()
-            .is_some_and(|c| c.to_string() == Token::Colon.literal())
-        {
-            tokens.push(Token::Colon);
-        } else {
-            anyhow::bail!("Invalid expression at line {}, Expected ':'.", self.line)
-        };
-
-        // Parse Value.
-        if let Some(char) = self.read() {
-            match char {
-                '"' => tokens.push(self.read_string()?),
-                'n' => tokens.push(self.read_null()?),
-                't' => tokens.push(self.read_boolean_true()?),
-                'f' => tokens.push(self.read_boolean_false()?),
-                c => {
-                    if is_number(c) {
-                        tokens.push(self.read_number(c)?);
-                    } else {
-                        anyhow::bail!(
-                            "Invalid expression at line {}, Expected 'value'.",
-                            self.line
-                        );
-                    }
+        for ch in self.input.by_ref() {
+            match ch {
+                '}' => {
+                    ended = true;
+                    break;
                 }
+                _ => todo!(),
             }
-        };
-        Ok(tokens)
+        }
+
+        if !ended {
+            anyhow::bail!("Unterminated object, expected '}}'");
+        }
+
+        Ok(Token::Object)
+    }
+
+    fn read_array(&mut self) -> Result<Token> {
+        let mut ended = true;
+
+        for ch in self.input.by_ref() {
+            match ch {
+                ']' => {
+                    ended = true;
+                    break;
+                }
+                _ => todo!(),
+            }
+        }
+
+        if !ended {
+            anyhow::bail!("Unterminated array, expected ']'");
+        }
+
+        Ok(Token::Array)
     }
 
     /// Peak ahead into the input.
