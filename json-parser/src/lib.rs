@@ -1,4 +1,6 @@
+mod errors;
 mod lexer;
+mod token;
 
 use anyhow::{Context, Result};
 use std::io::Read;

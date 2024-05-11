@@ -1,43 +1,190 @@
+use crate::{errors::LexError, token::Token};
 use std::{iter::Peekable, str::Chars};
-
-use anyhow::{Ok, Result};
-
-#[derive(Debug, PartialEq)]
-pub enum Token {
-    LBraces,
-    RBraces,
-    Literal(String),
-    Number(usize),
-    Object,
-    Array,
-    Colon,
-    Coma,
-    Null,
-    True,
-    False,
-}
-
-impl Token {
-    fn literal(&self) -> String {
-        match self {
-            Token::LBraces => String::from("{"),
-            Token::RBraces => String::from("}"),
-            Token::Literal(s) => s.clone(),
-            Token::Number(n) => n.to_string(),
-            Token::Object => String::from("{{}}"),
-            Token::Array => String::from("[]"),
-            Token::Colon => String::from(":"),
-            Token::Coma => String::from(","),
-            Token::Null => String::from("null"),
-            Token::True => String::from("true"),
-            Token::False => String::from("false"),
-        }
-    }
-}
 
 pub struct Lexer<'a> {
     input: Peekable<Chars<'a>>,
     line: i16,
+}
+
+impl<'a> Lexer<'a> {
+    /// Parse "key":"value".
+    fn parse_kv(&mut self) -> Result<Vec<Token>, LexError> {
+        let mut tokens = Vec::<Token>::new();
+
+        // Parse key.
+        let key = self.read_string()?;
+        tokens.push(key);
+
+        // Parse Colon.
+        if self
+            .read()
+            .is_some_and(|c| c.to_string() == Token::Colon.literal())
+        {
+            tokens.push(Token::Colon);
+        } else {
+            Err(LexError::InvalidSyntax {
+                line: self.line,
+                expected: String::from(":"),
+            })?
+        };
+
+        // Parse Value.
+        if let Some(char) = self.read() {
+            match char {
+                '"' => tokens.push(self.read_string()?),
+                'n' => tokens.push(self.read_null()?),
+                't' => tokens.push(self.read_boolean_true()?),
+                'f' => tokens.push(self.read_boolean_false()?),
+                '{' => tokens.push(self.read_object()?),
+                '[' => tokens.push(self.read_array()?),
+                c => {
+                    if is_number(c) {
+                        tokens.push(self.read_number(c)?);
+                    } else {
+                        Err(LexError::InvalidSyntax {
+                            line: self.line,
+                            expected: String::from("value"),
+                        })?
+                    }
+                }
+            }
+        };
+        Ok(tokens)
+    }
+
+    fn read_keyword(
+        &mut self,
+        mut buf: String,
+        stop_at: char,
+        expected_token: Token,
+    ) -> Result<Token, LexError> {
+        let mut ended = false;
+
+        for c in self.input.by_ref() {
+            if c == stop_at {
+                ended = true;
+                break;
+            } else {
+                buf.push(c)
+            }
+        }
+
+        if !ended {
+            Err(LexError::InvalidSyntax {
+                line: self.line,
+                expected: String::from(","),
+            })?
+        }
+
+        if buf != expected_token.literal() {
+            Err(LexError::InvalidKeyword {
+                line: self.line,
+                keyword: buf,
+                maybe: expected_token.literal(),
+            })?
+        }
+
+        Ok(expected_token)
+    }
+
+    /// Read string between double quotes.
+    ///
+    /// ## Errors
+    /// - If string is not terminated.
+    /// - If `:` is encountered before closing quote.
+    fn read_string(&mut self) -> Result<Token, LexError> {
+        let mut s = String::new();
+        let mut ended = false;
+
+        for c in self.input.by_ref() {
+            match c {
+                '"' => {
+                    ended = true;
+                    break;
+                }
+                ':' => Err(LexError::MissingClosingQuote { line: self.line })?,
+                ch => s.push(ch),
+            }
+        }
+
+        if !ended {
+            Err(LexError::UnterminatedString { line: self.line })?
+        }
+        Ok(Token::Literal(s))
+    }
+
+    fn read_number(&mut self, initial_char: char) -> Result<Token, LexError> {
+        let mut s = String::from(initial_char);
+        let mut ended = false;
+
+        for c in self.input.by_ref() {
+            if is_number(c) {
+                s.push(c);
+            } else {
+                ended = true;
+                break;
+            }
+        }
+
+        if !ended {
+            Err(LexError::UnterminatedNumber { line: self.line })?
+        }
+
+        // TODO handle parse error
+        Ok(Token::Number(s.parse::<usize>().unwrap()))
+    }
+
+    fn read_null(&mut self) -> Result<Token, LexError> {
+        self.read_keyword(String::from("n"), ',', Token::Null)
+    }
+
+    fn read_boolean_true(&mut self) -> Result<Token, LexError> {
+        self.read_keyword(String::from("t"), ',', Token::True)
+    }
+
+    fn read_boolean_false(&mut self) -> Result<Token, LexError> {
+        self.read_keyword(String::from("f"), ',', Token::False)
+    }
+
+    fn read_object(&mut self) -> Result<Token, LexError> {
+        let mut ended = true;
+
+        for ch in self.input.by_ref() {
+            match ch {
+                '}' => {
+                    ended = true;
+                    break;
+                }
+                _ => todo!(),
+            }
+        }
+
+        if !ended {
+            Err(LexError::UnterminatedObject { line: self.line })?
+        }
+
+        Ok(Token::Object)
+    }
+
+    fn read_array(&mut self) -> Result<Token, LexError> {
+        let mut ended = true;
+
+        for ch in self.input.by_ref() {
+            match ch {
+                ']' => {
+                    ended = true;
+                    break;
+                }
+                _ => todo!(),
+            }
+        }
+
+        if !ended {
+            Err(LexError::UnterminatedArray { line: self.line })?
+        }
+
+        Ok(Token::Array)
+    }
 }
 
 impl<'a> Lexer<'a> {
@@ -48,37 +195,40 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn lex(&mut self) -> Result<Vec<Token>> {
+    pub fn lex(&mut self) -> Result<Vec<Token>, LexError> {
         let mut tokens = Vec::<Token>::new();
 
         // File is empty.
         if self.peek().is_none() {
-            anyhow::bail!("Empty JSON file is invalid, expected '{{}}'")
+            Err(LexError::EmptyFile)?
         }
 
         while let Some(char) = self.read() {
             match char {
                 '{' => tokens.push(Token::LBraces),
                 '}' => {
-                    anyhow::ensure!(tokens[tokens.len() - 1] != Token::Coma, "Trailing Coma");
+                    if tokens[tokens.len() - 1] == Token::Coma {
+                        Err(LexError::TrailingComa { line: self.line })?
+                    }
                     tokens.push(Token::RBraces);
                 }
                 '"' => tokens.append(&mut self.parse_kv()?),
                 ',' => tokens.push(Token::Coma),
-                c => {
-                    anyhow::bail!("Unexpected token: {} at line {}", c, self.line)
-                }
+                c => Err(LexError::UnexpectedToken {
+                    line: self.line,
+                    token: c,
+                })?,
             }
         }
 
         // Ensure proper start.
         if tokens[0] != Token::LBraces {
-            anyhow::bail!("Expected opening braces")
+            Err(LexError::OpeningCurly)?
         }
 
         // Ensure proper ending.
         if tokens[tokens.len() - 1] != Token::RBraces {
-            anyhow::bail!("Expected ending braces");
+            Err(LexError::ClosingCurly)?
         }
 
         Ok(tokens)
@@ -100,219 +250,6 @@ impl<'a> Lexer<'a> {
             }
         }
         ch
-    }
-
-    /// Parse "key":"value".
-    fn parse_kv(&mut self) -> Result<Vec<Token>> {
-        let mut tokens = Vec::<Token>::new();
-
-        // Parse key.
-        let key = self.read_string()?;
-        tokens.push(key);
-
-        // Parse Colon.
-        if self
-            .read()
-            .is_some_and(|c| c.to_string() == Token::Colon.literal())
-        {
-            tokens.push(Token::Colon);
-        } else {
-            anyhow::bail!("Invalid expression at line {}, Expected ':'.", self.line)
-        };
-
-        // Parse Value.
-        if let Some(char) = self.read() {
-            match char {
-                '"' => tokens.push(self.read_string()?),
-                'n' => tokens.push(self.read_null()?),
-                't' => tokens.push(self.read_boolean_true()?),
-                'f' => tokens.push(self.read_boolean_false()?),
-                '{' => tokens.push(self.read_object()?),
-                '[' => tokens.push(self.read_array()?),
-                c => {
-                    if is_number(c) {
-                        tokens.push(self.read_number(c)?);
-                    } else {
-                        anyhow::bail!(
-                            "Invalid expression at line {}, Expected 'value'.",
-                            self.line
-                        );
-                    }
-                }
-            }
-        };
-        Ok(tokens)
-    }
-
-    /// Read string between double quotes.
-    ///
-    /// ## Errors
-    /// - If string is not terminated.
-    /// - If `:` is encountered before closing quote.
-    fn read_string(&mut self) -> Result<Token> {
-        let mut s = String::new();
-        let mut ended = false;
-
-        for c in self.input.by_ref() {
-            match c {
-                '"' => {
-                    ended = true;
-                    break;
-                }
-                ':' => anyhow::bail!("Expected closing quote "),
-                ch => s.push(ch),
-            }
-        }
-
-        if !ended {
-            anyhow::bail!("Unterminated string at line: {}", self.line);
-        }
-        Ok(Token::Literal(s))
-    }
-
-    fn read_number(&mut self, initial_char: char) -> Result<Token> {
-        let mut s = String::from(initial_char);
-        let mut ended = false;
-
-        for c in self.input.by_ref() {
-            if is_number(c) {
-                s.push(c);
-            } else {
-                ended = true;
-                break;
-            }
-        }
-
-        if !ended {
-            anyhow::bail!("Unterminated number at line: {}", self.line);
-        }
-
-        // TODO handle parse error
-        Ok(Token::Number(s.parse::<usize>().unwrap()))
-    }
-
-    fn read_null(&mut self) -> Result<Token> {
-        // we start with 'n' because we are already at it and any further read will advance the cursor away from it.
-        let mut null = String::from("n");
-        let mut ended = false;
-
-        for c in self.input.by_ref() {
-            match c {
-                ',' => {
-                    ended = true;
-                    break;
-                }
-                ch => null.push(ch),
-            }
-        }
-
-        if !ended {
-            anyhow::bail!("Unterminated Identifier, expected comma")
-        }
-
-        anyhow::ensure!(
-            null == Token::Null.literal(),
-            "Invalid identifier: {}, Maybe you mean 'null'?",
-            null
-        );
-
-        Ok(Token::Null)
-    }
-
-    fn read_boolean_true(&mut self) -> Result<Token> {
-        // we start with 'n' because we are already at it and any further read will advance the cursor away from it.
-        let mut true_literal = String::from("t");
-        let mut ended = false;
-
-        for c in self.input.by_ref() {
-            match c {
-                ',' => {
-                    ended = true;
-                    break;
-                }
-                ch => true_literal.push(ch),
-            }
-        }
-
-        if !ended {
-            anyhow::bail!("Unterminated Identifier, expected comma")
-        }
-
-        anyhow::ensure!(
-            true_literal == Token::True.literal(),
-            "Invalid identifier: {}, Maybe you mean 'true'?",
-            true_literal
-        );
-
-        Ok(Token::True)
-    }
-
-    fn read_boolean_false(&mut self) -> Result<Token> {
-        // we start with 'n' because we are already at it and any further read will advance the cursor away from it.
-        let mut false_literal = String::from("f");
-        let mut ended = false;
-
-        for c in self.input.by_ref() {
-            match c {
-                ',' => {
-                    ended = true;
-                    break;
-                }
-                ch => false_literal.push(ch),
-            }
-        }
-
-        if !ended {
-            anyhow::bail!("Unterminated Identifier, expected comma")
-        }
-
-        anyhow::ensure!(
-            false_literal == Token::False.literal(),
-            "Invalid identifier: {}, Maybe you mean 'false'?",
-            false_literal
-        );
-
-        Ok(Token::False)
-    }
-
-    fn read_object(&mut self) -> Result<Token> {
-        let mut ended = true;
-
-        for ch in self.input.by_ref() {
-            match ch {
-                '}' => {
-                    ended = true;
-                    break;
-                }
-                _ => todo!(),
-            }
-        }
-
-        if !ended {
-            anyhow::bail!("Unterminated object, expected '}}'");
-        }
-
-        Ok(Token::Object)
-    }
-
-    fn read_array(&mut self) -> Result<Token> {
-        let mut ended = true;
-
-        for ch in self.input.by_ref() {
-            match ch {
-                ']' => {
-                    ended = true;
-                    break;
-                }
-                _ => todo!(),
-            }
-        }
-
-        if !ended {
-            anyhow::bail!("Unterminated array, expected ']'");
-        }
-
-        Ok(Token::Array)
     }
 
     /// Peak ahead into the input.
