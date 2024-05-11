@@ -11,6 +11,22 @@ impl<'a> Lexer<'a> {
     fn parse_kv(&mut self) -> Result<Vec<Token>, LexError> {
         let mut tokens = Vec::<Token>::new();
 
+        loop {
+            if let Some(ch) = self.peek() {
+                if is_newline(ch) {
+                    self.line += 1;
+                    self.read();
+                    continue;
+                }
+                if is_whitespace(ch) {
+                    self.read();
+                    continue;
+                }
+                break;
+            }
+            break;
+        }
+
         // Parse key.
         let key = self.read_string()?;
         tokens.push(key);
@@ -35,7 +51,10 @@ impl<'a> Lexer<'a> {
                 'n' => tokens.push(self.read_null()?),
                 't' => tokens.push(self.read_boolean_true()?),
                 'f' => tokens.push(self.read_boolean_false()?),
-                '{' => tokens.push(self.read_object()?),
+                '{' => {
+                    tokens.push(Token::LBraces);
+                    tokens.append(&mut self.parse_kv()?)
+                }
                 '[' => tokens.push(self.read_array()?),
                 c => {
                     if is_number(c) {
@@ -93,7 +112,7 @@ impl<'a> Lexer<'a> {
     /// - If string is not terminated.
     /// - If `:` is encountered before closing quote.
     fn read_string(&mut self) -> Result<Token, LexError> {
-        let mut s = String::new();
+        let mut buf = String::new();
         let mut ended = false;
 
         for c in self.input.by_ref() {
@@ -103,14 +122,14 @@ impl<'a> Lexer<'a> {
                     break;
                 }
                 ':' => Err(LexError::MissingClosingQuote { line: self.line })?,
-                ch => s.push(ch),
+                ch => buf.push(ch),
             }
         }
 
         if !ended {
             Err(LexError::UnterminatedString { line: self.line })?
         }
-        Ok(Token::Literal(s))
+        Ok(Token::Literal(buf))
     }
 
     fn read_number(&mut self, initial_char: char) -> Result<Token, LexError> {
@@ -144,26 +163,6 @@ impl<'a> Lexer<'a> {
 
     fn read_boolean_false(&mut self) -> Result<Token, LexError> {
         self.read_keyword(String::from("f"), ',', Token::False)
-    }
-
-    fn read_object(&mut self) -> Result<Token, LexError> {
-        let mut ended = true;
-
-        for ch in self.input.by_ref() {
-            match ch {
-                '}' => {
-                    ended = true;
-                    break;
-                }
-                _ => todo!(),
-            }
-        }
-
-        if !ended {
-            Err(LexError::UnterminatedObject { line: self.line })?
-        }
-
-        Ok(Token::Object)
     }
 
     fn read_array(&mut self) -> Result<Token, LexError> {
