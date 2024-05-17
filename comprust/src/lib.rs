@@ -5,6 +5,7 @@ use crate::tree::{BTree, Node};
 use anyhow::{Context, Ok, Result};
 use heap::Heap;
 use std::collections::HashMap;
+use tree::create_lookup_table;
 
 pub fn run() -> Result<()> {
     let file_path = std::env::args().nth(1).context("get file_path")?;
@@ -18,13 +19,17 @@ pub fn run() -> Result<()> {
         .map(|(k, v)| Node::new(*v, Some(k.to_string()), None, None, true))
         .collect();
 
-    let mut h = Heap::default();
+    let mut heap = Heap::default();
 
     for node in nodes {
-        h.insert(node);
+        heap.insert(node);
     }
 
-    let btree = create_btree(&mut h);
+    let btree = create_btree(&mut heap);
+
+    let lookup_table = create_lookup_table(btree.root, Some(Vec::<u8>::default()));
+
+    dbg!(lookup_table);
 
     Ok(())
 }
@@ -34,10 +39,6 @@ fn formulate_table(contents: String) -> Result<HashMap<String, usize>> {
     let mut table = HashMap::<String, usize>::new();
 
     for c in contents.chars() {
-        if c == ' ' || c == '\n' || c == '\r' {
-            continue;
-        }
-
         if let Some(key) = table.get_mut(&c.to_string()) {
             *key += 1
         } else {
