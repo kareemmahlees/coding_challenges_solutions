@@ -1,3 +1,8 @@
+use bitvec::{
+    prelude::*,
+    prelude::{bitvec, BitVec},
+};
+
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -42,24 +47,26 @@ impl Node {
     }
 }
 
-pub fn create_lookup_table(node: Node, bin_string: Option<Vec<u8>>) -> HashMap<String, Vec<u8>> {
-    let mut bin_string = bin_string.unwrap_or_default();
-
+pub fn create_lookup_table(node: Node, bin: Option<BitVec>) -> HashMap<String, BitVec> {
+    let empty_vec = bitvec![];
+    let bin = bin.unwrap_or(empty_vec);
     if node.is_leaf {
         let mut res = HashMap::new();
-        res.insert(node.value.unwrap(), bin_string);
+        res.insert(node.value.unwrap(), bin);
         return res;
     }
 
     let mut hash_map = HashMap::new();
     if let Some(left) = node.left {
-        bin_string.push(0);
-        hash_map.extend(create_lookup_table(*left, Some(bin_string.clone())));
+        let mut left_bin = bin.clone();
+        left_bin.push(false);
+        hash_map.extend(create_lookup_table(*left, Some(left_bin)));
     }
 
     if let Some(right) = node.right {
-        bin_string.push(1);
-        hash_map.extend(create_lookup_table(*right, Some(bin_string)));
+        let mut right_bin = bin.clone();
+        right_bin.push(true);
+        hash_map.extend(create_lookup_table(*right, Some(right_bin)));
     }
 
     hash_map
