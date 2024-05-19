@@ -3,53 +3,107 @@ mod table;
 mod tree;
 
 use crate::tree::{BTree, Node};
-use anyhow::{Context, Ok, Result};
-use clap::Parser;
+use anyhow::{Context, Error, Ok, Result};
+use bitvec::{bitvec, order::Lsb0};
+use clap::{Parser, Subcommand};
 use heap::Heap;
-use std::{collections::HashMap, fs::File, io::Write, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufRead, BufReader, Read, Write},
+    path::PathBuf,
+};
 use table::LookupTable;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// path to file to be compressed
-    file_path: String,
+    #[command(subcommand)]
+    command: Commands,
+}
 
-    /// Number of times to greet
-    #[arg(short, long)]
-    output: PathBuf,
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Compress data
+    Compress {
+        /// path to file to be compressed
+        file_path: PathBuf,
+
+        /// compressed output path
+        #[arg(short, long)]
+        output: PathBuf,
+    },
+    /// Decompress data.
+    ///
+    /// __Must be initially compressed with comprust__.
+    DeCompress {
+        /// path to file to be decompressed
+        file_path: PathBuf,
+
+        /// compressed output path
+        #[arg(short, long)]
+        output: PathBuf,
+    },
 }
 
 pub fn run() -> Result<()> {
     let args = Args::parse();
 
-    let contents = std::fs::read_to_string(&args.file_path).context("read file contents")?;
+    match &args.command {
+        Commands::Compress { file_path, output } => {
+            let contents =
+                std::fs::read_to_string(file_path).context("Failed to read file contents")?;
 
-    let table = create_frequency_table(&contents)?;
+            let table = create_frequency_table(&contents)?;
 
-    let nodes: Vec<Node> = table
-        .iter()
-        .map(|(k, v)| Node::new(*v, Some(k.to_string()), None, None, true))
-        .collect();
+            let nodes: Vec<Node> = table
+                .iter()
+                .map(|(k, v)| Node::new(*v, Some(k.to_string()), None, None, true))
+                .collect();
 
-    let mut heap = Heap::default();
+            let mut heap = Heap::default();
 
-    for node in nodes {
-        heap.insert(node);
+            for node in nodes {
+                heap.insert(node);
+            }
+
+            let btree = BTree::new(&mut heap);
+
+            let lookup_table = LookupTable::new(btree);
+
+            let mut file = File::create(output).context("Failed to create output file")?;
+
+            serde_json::to_writer(&file, &lookup_table).context("Failed to write file header")?;
+
+            let comp_bytes = compress(contents, lookup_table);
+
+            writeln!(file).context("Failed to write newline separator")?;
+
+            file.write_all(&comp_bytes)
+                .context("Failed to write compressed content")?;
+        }
+        Commands::DeCompress { file_path, output } => {
+            let file = File::open(file_path).context("Failed to open compressed file")?;
+            let mut reader = BufReader::new(file);
+
+            let first_line = reader
+                .by_ref()
+                .lines()
+                .next()
+                .context("Invalid compressed file format")??;
+            let lookup_table = serde_json::from_str::<HashMap<String, String>>(&first_line)
+                .context("Failed to deserialize lookup table")?;
+
+            let mut buf = Vec::<u8>::new();
+
+            reader.read_to_end(&mut buf).unwrap();
+
+            let content = decompress(buf, lookup_table);
+            let mut file = File::create(output).context("Failed to create output file")?;
+            write!(file, "{content}")
+                .context("Failed to write decompressed content to output file")?;
+        }
     }
-
-    let btree = BTree::new(&mut heap);
-
-    let lookup_table = LookupTable::new(btree);
-
-    let mut file = File::create(&args.output).context("creating output file")?;
-
-    serde_json::to_writer(&file, &lookup_table).context("write header to file")?;
-
-    let comp_bytes = compress(contents, lookup_table);
-
-    file.write_all(&comp_bytes)
-        .context("write compressed bytes")?;
 
     Ok(())
 }
@@ -95,6 +149,30 @@ fn compress(content: String, lookup_table: LookupTable) -> Vec<u8> {
     }
     comp_letters
 }
+
+fn decompress(data: Vec<u8>, lookup_table: HashMap<String, String>) -> String {
+    let mut content = String::new();
+    let mut buf = String::new();
+    for byte in &data[..data.len()] {
+        for bit_ptr in 0..8 {
+            match (byte >> (7 - bit_ptr)) & 1 == 1 {
+                true => {
+                    buf.push('1');
+                }
+                false => {
+                    buf.push('0');
+                }
+            }
+
+            if let Some(char) = lookup_table.get(&buf) {
+                content.push_str(char);
+                buf.clear()
+            }
+        }
+    }
+    content
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -1,6 +1,6 @@
 use crate::tree::{BTree, Node};
 use bitvec::prelude::{bitvec, BitVec, Lsb0};
-use serde::{ser::SerializeMap, Serialize};
+use serde::{ser::SerializeMap, Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -29,7 +29,9 @@ impl Serialize for LookupTable {
                     contents.push('0');
                 }
             }
-            simplified_hashmap.insert(k.to_owned(), contents);
+            // we intentionally reverse the hashmap here to make it
+            // easier to interpret codes.
+            simplified_hashmap.insert(contents, k.to_owned());
         }
         let mut map = serializer.serialize_map(Some(simplified_hashmap.len()))?;
         for (k, v) in simplified_hashmap {
