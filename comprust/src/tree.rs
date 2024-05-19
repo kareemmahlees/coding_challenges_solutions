@@ -2,8 +2,9 @@ use bitvec::{
     prelude::*,
     prelude::{bitvec, BitVec},
 };
-
 use std::collections::HashMap;
+
+use crate::heap::Heap;
 
 #[derive(Debug)]
 pub struct BTree {
@@ -11,18 +12,31 @@ pub struct BTree {
 }
 
 impl BTree {
-    pub fn new(root: Node) -> Self {
-        BTree { root }
+    pub fn new(heap: &mut Heap) -> Self {
+        while heap.size() > 1 {
+            let tmp1 = heap.delete();
+            let tmp2 = heap.delete();
+            let tmp3 = Node::new(
+                tmp1.weight() + tmp2.weight(),
+                None,
+                Some(Box::new(tmp1)),
+                Some(Box::new(tmp2)),
+                false,
+            );
+            heap.insert(tmp3);
+        }
+        let btree_root = heap.delete();
+        BTree { root: btree_root }
     }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct Node {
     weight: usize,
-    value: Option<String>,
-    left: Option<Box<Self>>,
-    right: Option<Box<Self>>,
-    is_leaf: bool,
+    pub(crate) value: Option<String>,
+    pub(crate) left: Option<Box<Self>>,
+    pub(crate) right: Option<Box<Self>>,
+    pub(crate) is_leaf: bool,
 }
 
 impl Node {

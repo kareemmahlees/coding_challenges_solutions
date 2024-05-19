@@ -1,13 +1,13 @@
 mod heap;
+mod table;
 mod tree;
 
 use crate::tree::{BTree, Node};
 use anyhow::{Context, Ok, Result};
-use bitvec::prelude::*;
 use clap::Parser;
 use heap::Heap;
 use std::{collections::HashMap, fs::File, io::Write, path::PathBuf};
-use tree::create_lookup_table;
+use table::LookupTable;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -38,11 +38,13 @@ pub fn run() -> Result<()> {
         heap.insert(node);
     }
 
-    let btree = create_btree(&mut heap);
+    let btree = BTree::new(&mut heap);
 
-    let lookup_table = create_lookup_table(btree.root, None);
+    let lookup_table = LookupTable::new(btree);
 
     let mut file = File::create(&args.output).context("creating output file")?;
+
+    serde_json::to_writer(&file, &lookup_table).context("write header to file")?;
 
     let comp_bytes = compress(contents, lookup_table);
 
@@ -67,29 +69,12 @@ fn create_frequency_table(contents: &str) -> Result<HashMap<String, usize>> {
     Ok(table)
 }
 
-fn create_btree(heap: &mut Heap) -> BTree {
-    while heap.size() > 1 {
-        let tmp1 = heap.delete();
-        let tmp2 = heap.delete();
-        let tmp3 = Node::new(
-            tmp1.weight() + tmp2.weight(),
-            None,
-            Some(Box::new(tmp1)),
-            Some(Box::new(tmp2)),
-            false,
-        );
-        heap.insert(tmp3);
-    }
-    let btree_root = heap.delete();
-    BTree::new(btree_root)
-}
-
-fn compress(content: String, lookup_table: HashMap<String, BitVec>) -> Vec<u8> {
+fn compress(content: String, lookup_table: LookupTable) -> Vec<u8> {
     let mut comp_letters = Vec::with_capacity(content.len());
     let mut comp_byte = 0b0000_0000;
     let mut bit_ptr = 7;
     for letter in content.chars() {
-        let code = lookup_table.get(&letter.to_string()).unwrap();
+        let code = lookup_table.0.get(&letter.to_string()).unwrap();
         for bit in code {
             // set bit on current byte
             comp_byte |= (*bit as u8) << bit_ptr;
