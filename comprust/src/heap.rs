@@ -94,3 +94,69 @@ impl Heap {
         return_value
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn setup() -> Heap {
+        let mut heap = Heap::default();
+
+        let n1 = Node::new(0, None, None, None, false);
+        let n2 = Node::new(1, None, None, None, false);
+        let n3 = Node::new(2, None, None, None, false);
+
+        heap.insert(n1);
+        heap.insert(n2);
+        heap.insert(n3);
+
+        heap
+    }
+
+    #[test]
+    fn test_get_parent_idx() {
+        let heap = setup();
+
+        assert_eq!(heap.get_parent_idx(0), None);
+        assert_eq!(heap.get_parent_idx(1), Some(0));
+        assert_eq!(heap.get_parent_idx(4), Some(1));
+    }
+
+    #[test]
+    fn test_get_left_child_idx() {
+        let heap = setup();
+
+        assert_eq!(heap.left_child_idx(0), Some(1));
+        assert_eq!(heap.left_child_idx(1), None);
+    }
+
+    #[test]
+    fn test_get_right_child_idx() {
+        let heap = setup();
+
+        assert_eq!(heap.right_child_idx(0), Some(2));
+        assert_eq!(heap.right_child_idx(2), None);
+    }
+
+    #[test]
+    fn test_insert() {
+        let mut heap = setup();
+
+        heap.insert(Node::new(3, None, None, None, false));
+
+        assert_eq!(heap.elems.len(), 4);
+        assert_eq!(heap.elems.last().unwrap().weight(), 3)
+    }
+
+    #[test]
+    fn test_delete() {
+        let mut heap = setup();
+
+        let root = heap.delete();
+
+        assert_eq!(heap.elems.len(), 2);
+        assert_eq!(root.weight(), 0);
+
+        assert_eq!(heap.elems.first().unwrap().weight(), 1)
+    }
+}

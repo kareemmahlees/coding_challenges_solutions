@@ -57,3 +57,24 @@ impl Node {
         self.weight
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_creating_btree_from_heap() {
+        let mut heap = Heap::default();
+        let n1 = Node::new(0, None, None, None, false);
+        let n2 = Node::new(1, None, None, None, false);
+        let n3 = Node::new(2, None, None, None, false);
+
+        heap.insert(n1);
+        heap.insert(n2);
+        heap.insert(n3);
+
+        let btree = BTree::new(&mut heap);
+
+        assert_eq!(btree.root.weight(), 3)
+    }
+}

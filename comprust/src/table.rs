@@ -68,3 +68,22 @@ pub fn create_lookup_table(node: Node, bin: Option<BitVec>) -> HashMap<String, B
 
     hash_map
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_create_lookup_table() {
+        let l = Node::new(1, Some(String::from("a")), None, None, true);
+        let r = Node::new(2, Some(String::from("b")), None, None, true);
+        let root = Node::new(3, None, Some(Box::new(l)), Some(Box::new(r)), false);
+
+        let lookup_table = create_lookup_table(root, None);
+
+        assert_eq!(lookup_table.len(), 2);
+        assert_eq!(lookup_table.get("a").unwrap().len(), 1);
+        assert!(!lookup_table.get("a").unwrap()[0]);
+        assert!(lookup_table.get("b").unwrap()[0]);
+    }
+}
