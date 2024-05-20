@@ -1,6 +1,7 @@
 use crate::tree::Node;
 
 #[derive(Default, Debug)]
+/// Implementation of a `min-heap`.
 pub(crate) struct Heap {
     elems: Vec<Node>,
 }
@@ -41,6 +42,7 @@ impl Heap {
         }
     }
 
+    /// Inserts and Heapyfies.
     pub(crate) fn insert(&mut self, elem: Node) -> Vec<Node> {
         self.elems.push(elem);
         let mut idx = self.elems.len() - 1;
@@ -62,6 +64,7 @@ impl Heap {
         self.elems.clone()
     }
 
+    /// Deletes and Heapyfies.
     pub(crate) fn delete(&mut self) -> Node {
         let elems_len = self.elems.len();
         self.elems.swap(0, elems_len - 1);

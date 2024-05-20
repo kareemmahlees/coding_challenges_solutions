@@ -1,9 +1,10 @@
 use crate::tree::{BTree, Node};
 use bitvec::prelude::{bitvec, BitVec, Lsb0};
-use serde::{ser::SerializeMap, Deserialize, Serialize};
+use serde::{ser::SerializeMap, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug)]
+/// Table storing chars and their `bit` codes.
 pub struct LookupTable(pub(crate) HashMap<String, BitVec>);
 
 impl LookupTable {
@@ -41,6 +42,8 @@ impl Serialize for LookupTable {
     }
 }
 
+/// Traverses the binary tree recursively and formulates `HashMap`
+/// which will be used in creating `LookupTable`.
 pub fn create_lookup_table(node: Node, bin: Option<BitVec>) -> HashMap<String, BitVec> {
     let empty_vec = bitvec![];
     let bin = bin.unwrap_or(empty_vec);

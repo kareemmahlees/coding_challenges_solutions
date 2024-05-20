@@ -3,8 +3,7 @@ mod table;
 mod tree;
 
 use crate::tree::{BTree, Node};
-use anyhow::{Context, Error, Ok, Result};
-use bitvec::{bitvec, order::Lsb0};
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use heap::Heap;
 use std::{
@@ -46,6 +45,7 @@ enum Commands {
     },
 }
 
+/// Entrypoint
 pub fn run() -> Result<()> {
     let args = Args::parse();
 
@@ -123,6 +123,7 @@ fn create_frequency_table(contents: &str) -> Result<HashMap<String, usize>> {
     Ok(table)
 }
 
+/// creates a vector of compressed bytes.
 fn compress(content: String, lookup_table: LookupTable) -> Vec<u8> {
     let mut comp_letters = Vec::with_capacity(content.len());
     let mut comp_byte = 0b0000_0000;
@@ -150,6 +151,9 @@ fn compress(content: String, lookup_table: LookupTable) -> Vec<u8> {
     comp_letters
 }
 
+/// Searches the lookup table for byte codes and constructs a string from them.
+///
+/// Lookup table is typically stored as a first line header in compressed file.
 fn decompress(data: Vec<u8>, lookup_table: HashMap<String, String>) -> String {
     let mut content = String::new();
     let mut buf = String::new();

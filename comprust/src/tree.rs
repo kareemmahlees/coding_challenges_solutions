@@ -1,9 +1,3 @@
-use bitvec::{
-    prelude::*,
-    prelude::{bitvec, BitVec},
-};
-use std::collections::HashMap;
-
 use crate::heap::Heap;
 
 #[derive(Debug)]
@@ -11,6 +5,7 @@ pub struct BTree {
     pub root: Node,
 }
 
+/// An implementations of a binary tree, constructed from a min heap.
 impl BTree {
     pub fn new(heap: &mut Heap) -> Self {
         while heap.size() > 1 {
@@ -31,7 +26,9 @@ impl BTree {
 }
 
 #[derive(Debug, Clone, Default)]
+/// An implementation of a Leaf/Internal tree node.
 pub struct Node {
+    /// if `is_leaf=true` this represents the frequency of a letter.
     weight: usize,
     pub(crate) value: Option<String>,
     pub(crate) left: Option<Box<Self>>,
