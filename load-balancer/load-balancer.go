@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 )
 
 // LoadBalancer keeps track of healthy and down servers
 // and forwards requets to healthy servers accordingly.
 type LoadBalancer struct {
+	mu             *sync.Mutex
 	healthyServers []*Server
 	downServers    []*Server
 	// idx is used to keep track of the current round-about.
@@ -23,6 +26,8 @@ type LoadBalancer struct {
 // NewLoadBalancer reads arguments (server urls) passed to the program
 // and creates a list of them returning an instance of LoadBalancer.
 func NewLoadBalancer(done <-chan os.Signal) *LoadBalancer {
+	var mu sync.Mutex
+
 	healtyServers := []*Server{}
 	downServers := []*Server{}
 
@@ -38,13 +43,15 @@ func NewLoadBalancer(done <-chan os.Signal) *LoadBalancer {
 		}
 	}
 
-	return &LoadBalancer{healthyServers: healtyServers, downServers: downServers, idx: 0, done: done}
+	return &LoadBalancer{mu: &mu, healthyServers: healtyServers, downServers: downServers, idx: 0, done: done}
 }
 
 // ListenAndServe spwans a health checker in a goroutine
 // and spins up a new http server.
 func (lb *LoadBalancer) ListenAndServe() {
 	go lb.SpwanHealthChecker()
+
+	client := NewClient()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		server := lb.GetCurrentServer()
@@ -53,7 +60,11 @@ func (lb *LoadBalancer) ListenAndServe() {
 			w.Write([]byte("NO healthy servers"))
 			return
 		}
-		resp, err := http.Get(server.url)
+
+		now := time.Now()
+		resp, err := client.Get(server.url)
+		slog.Info("Forwarded request", "serverUrl", server.url, "duration", time.Since(now))
+
 		if err != nil {
 			w.Write([]byte(fmt.Sprintf("Something went wrong: %v", err)))
 		}
@@ -68,7 +79,7 @@ func (lb *LoadBalancer) ListenAndServe() {
 	})
 
 	go func() {
-		log.Default().Println("Load balancer listening")
+		slog.Info("Load balancer listening")
 		if err := http.ListenAndServe(":80", nil); err != nil {
 			log.Fatal(err)
 			os.Exit(1)
@@ -120,6 +131,8 @@ func (lb *LoadBalancer) SpwanHealthChecker() {
 // if any had returned alive.
 func (lb *LoadBalancer) checkupOnDownServers() {
 	newDownServers := []*Server{}
+
+	lb.mu.Lock()
 	for _, server := range lb.downServers {
 		status := server.HealthCheck()
 		switch status {
@@ -131,12 +144,15 @@ func (lb *LoadBalancer) checkupOnDownServers() {
 		}
 	}
 	lb.downServers = newDownServers
+	lb.mu.Unlock()
 }
 
 // checkupOnHealthyServers periodically checks on healthy servers
 // if any went down.
 func (lb *LoadBalancer) checkupOnHealthyServers() {
 	newHealthyServers := []*Server{}
+
+	lb.mu.Lock()
 	for _, server := range lb.healthyServers {
 		status := server.HealthCheck()
 		switch status {
@@ -148,4 +164,5 @@ func (lb *LoadBalancer) checkupOnHealthyServers() {
 		}
 	}
 	lb.healthyServers = newHealthyServers
+	lb.mu.Unlock()
 }
