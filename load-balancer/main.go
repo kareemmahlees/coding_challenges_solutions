@@ -1,30 +1,26 @@
 package main
 
 import (
-	"io"
-	"log"
-	"net/http"
+	"flag"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
+var (
+	healthCheckFreq = flag.Int("t", 5, "specifiy how frequent to health check the servers")
+	maxConn         = flag.Int("c", 10, "specifiy max connections to be handled by a server")
+)
+
+func init() {
+	flag.Parse()
+}
+
 func main() {
-	loadBalancer := NewLoadBalancer()
+	done := make(chan os.Signal)
+	signal.Notify(done, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		server := loadBalancer.GetCurrentServer()
-		resp, err := http.Get(server.url)
-		if err != nil {
-			log.Fatalf("Something went wrong: %v", err)
-		}
-		defer resp.Body.Close()
+	loadBalancer := NewLoadBalancer(done)
 
-		byteData, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatalf("Something went wrong: %v", err)
-		}
-
-		w.Write([]byte(byteData))
-	})
-
-	log.Default().Println("Load balancer listening")
-	log.Fatal(http.ListenAndServe(":80", nil))
+	loadBalancer.ListenAndServe()
 }
