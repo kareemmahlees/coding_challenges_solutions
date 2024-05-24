@@ -2,7 +2,7 @@
 
 A compression tool written in Rust based on the Huffman encoding algorithm.
 
-challenge url: https://codingchallenges.fyi/challenges/challenge-huffman
+challenge url: <https://codingchallenges.fyi/challenges/challenge-huffman>
 
 > [!Note]
 > This challenge is only tested against text file, you might find that it works well with other file formats, but no guarantee.
