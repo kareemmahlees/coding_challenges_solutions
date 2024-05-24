@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -51,32 +52,8 @@ func NewLoadBalancer(done <-chan os.Signal) *LoadBalancer {
 func (lb *LoadBalancer) ListenAndServe() {
 	go lb.SpwanHealthChecker()
 
-	client := NewClient()
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		server := lb.GetCurrentServer()
-		if server == nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("NO healthy servers"))
-			return
-		}
-
-		now := time.Now()
-		resp, err := client.Get(server.url)
-		slog.Info("Forwarded request", "serverUrl", server.url, "duration", time.Since(now))
-
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("Something went wrong: %v", err)))
-		}
-		defer resp.Body.Close()
-
-		byteData, err := io.ReadAll(resp.Body)
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("Something went wrong: %v", err)))
-		}
-
-		w.Write([]byte(byteData))
-	})
+	// TODO: handle multible routes
+	http.HandleFunc("/", lb.ForwardRequest)
 
 	go func() {
 		slog.Info("Load balancer listening")
@@ -95,9 +72,9 @@ func (lb *LoadBalancer) ListenAndServe() {
 
 }
 
-// getCurrentServer returns the next server in the
+// GetNextUpServer returns the next server in the
 // list of healthy server in a round-about manner.
-func (lb *LoadBalancer) GetCurrentServer() *Server {
+func (lb *LoadBalancer) GetNextUpServer() *Server {
 	if len(lb.healthyServers) == 0 {
 		return nil
 	}
@@ -110,6 +87,41 @@ func (lb *LoadBalancer) GetCurrentServer() *Server {
 	lb.idx++
 
 	return curServer
+}
+
+// ForwardRequest modifies the incoming request url to be the current server url
+// and passes the same request to client.Do with some logging, writting back
+// the response to the user.
+func (lb *LoadBalancer) ForwardRequest(w http.ResponseWriter, r *http.Request) {
+	server := lb.GetNextUpServer()
+	client := NewClient()
+
+	if server == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("NO healthy servers"))
+		return
+	}
+
+	r.URL, _ = url.Parse(server.url)
+	// reset this because it can't be set while we override r.URL
+	// see https://stackoverflow.com/questions/19595860/http-request-requesturi-field-when-making-request-in-go
+	r.RequestURI = ""
+
+	now := time.Now()
+	resp, err := client.Do(r)
+	slog.Info("Forwarded request", "serverUrl", server.url, "duration", time.Since(now))
+
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Something went wrong: %v", err)))
+	}
+	defer resp.Body.Close()
+
+	byteData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Something went wrong: %v", err)))
+	}
+
+	w.Write([]byte(byteData))
 }
 
 func (lb *LoadBalancer) SpwanHealthChecker() {
