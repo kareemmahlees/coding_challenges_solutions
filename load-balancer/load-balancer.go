@@ -18,7 +18,7 @@ type LoadBalancer struct {
 	mu             *sync.Mutex
 	healthyServers []*Server
 	downServers    []*Server
-	// idx is used to keep track of the current round-about.
+	// idx is used to keep track of the current round robin.
 	idx int
 	// done is used to stop the ticker on exit.
 	done <-chan os.Signal
@@ -73,7 +73,7 @@ func (lb *LoadBalancer) ListenAndServe() {
 }
 
 // GetNextUpServer returns the next server in the
-// list of healthy server in a round-about manner.
+// list of healthy server in a round robin manner.
 func (lb *LoadBalancer) GetNextUpServer() *Server {
 	if len(lb.healthyServers) == 0 {
 		return nil
@@ -93,6 +93,8 @@ func (lb *LoadBalancer) GetNextUpServer() *Server {
 // and passes the same request to client.Do with some logging, writting back
 // the response to the user.
 func (lb *LoadBalancer) ForwardRequest(w http.ResponseWriter, r *http.Request) {
+	var err error
+
 	server := lb.GetNextUpServer()
 	client := NewClient()
 
@@ -102,14 +104,18 @@ func (lb *LoadBalancer) ForwardRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.URL, _ = url.Parse(server.url)
+	r.URL, err = url.Parse(server.url + r.URL.Path)
+	if err != nil {
+		slog.Error("Invalid server url", "serverUrl", server.url)
+		return
+	}
 	// reset this because it can't be set while we override r.URL
 	// see https://stackoverflow.com/questions/19595860/http-request-requesturi-field-when-making-request-in-go
 	r.RequestURI = ""
 
 	now := time.Now()
 	resp, err := client.Do(r)
-	slog.Info("Forwarded request", "serverUrl", server.url, "duration", time.Since(now))
+	slog.Info("Forwarded request", "serverUrl", server.url, "path", r.URL.Path, "duration", time.Since(now))
 
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Something went wrong: %v", err)))
