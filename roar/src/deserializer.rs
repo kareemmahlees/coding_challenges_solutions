@@ -2,15 +2,18 @@ use crate::DataType;
 use std::io::{BufRead, ErrorKind};
 use std::str::from_utf8;
 
+/// Struct responsible for deserializing incoming tcp data into understandable types.
 pub(crate) struct DeSerializer<'a> {
     payload: &'a [u8],
 }
 
 impl<'a> DeSerializer<'a> {
+    /// Creates a new instance of `DeSerializer` with the tcp `payload` to deserialize.
     pub fn new(payload: &'a [u8]) -> Self {
         Self { payload }
     }
 
+    /// Gets back an array of friendly data types from the given payload.
     pub fn deserialize(&mut self) -> Vec<DataType> {
         let mut data_types = Vec::<DataType>::new();
 
@@ -22,6 +25,7 @@ impl<'a> DeSerializer<'a> {
         data_types
     }
 
+    /// Figures out the type of payload based on the firt byte of the chunk.
     fn get_data_type(&mut self, chunk: Vec<u8>) -> DataType {
         let mark = chunk[0];
         let content = from_utf8(&chunk[1..]).unwrap().to_string();
@@ -52,6 +56,7 @@ impl<'a> DeSerializer<'a> {
         }
     }
 
+    /// Reads from the payload, while consuming form it, until a `\r\n` is encountered.
     fn read_next_chunk(&mut self, size: Option<usize>) -> Result<Vec<u8>, ErrorKind> {
         let mut next_chunk = if let Some(size) = size {
             Vec::with_capacity(size + 2) // + \n + \r

@@ -5,6 +5,7 @@ use std::{
 
 use crate::DataType;
 
+/// Supported commands by `Roar`.
 pub enum Command {
     Ping,
     Echo,
@@ -37,6 +38,7 @@ impl From<String> for Command {
 }
 
 impl Command {
+    /// Execute commands sent by the client.
     pub fn handle_command(
         command: &String,
         arguments: &[DataType],

@@ -1,4 +1,5 @@
 #[derive(Debug, PartialEq, Eq)]
+/// A representation of the `RESP` protocol data types.
 pub enum DataType {
     SimpleString(String),
     Error(String),
@@ -9,6 +10,8 @@ pub enum DataType {
 }
 
 impl DataType {
+    /// Convert the data type into a format understandable by the client
+    /// according to the `RESP` protocol.
     pub fn serialize(&self) -> String {
         let serialized_data = match self {
             DataType::SimpleString(content) => format!("+{content}\r\n"),
@@ -21,6 +24,9 @@ impl DataType {
         serialized_data
     }
 
+    /// Get the value stored inside the data type.
+    ///
+    /// **Not implemented for all types**
     pub fn inner(&self) -> &String {
         let inner = match self {
             DataType::SimpleString(content) => content,

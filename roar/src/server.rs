@@ -4,15 +4,19 @@ use std::io::{Read, Write};
 use std::net::{SocketAddrV4, TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 
+/// A simple TCP server to which `redis-cli` will connect.
 pub struct Server {
     addr: SocketAddrV4,
 }
 
 impl Server {
+    /// Create a new instance of `Server`.
     pub fn new(addr: SocketAddrV4) -> Self {
         Self { addr }
     }
 
+    /// Main entry point of the program, listens for incoming requests
+    /// and handles them accordingly.
     pub fn listen_and_serve(self) {
         let listener = TcpListener::bind(self.addr).unwrap();
         let dict = Arc::new(Mutex::new(HashMap::new()));
@@ -29,6 +33,7 @@ impl Server {
     }
 }
 
+/// Responds to the clients commands.
 fn handle_client(
     mut stream: TcpStream,
     dict: Arc<Mutex<HashMap<String, String>>>,
