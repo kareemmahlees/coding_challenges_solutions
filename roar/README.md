@@ -15,3 +15,20 @@ Supportes the follwing commands:
 - DEL
 - LPUSH
 - RPUSH
+
+## How to run
+
+To start the server:
+
+```shell
+cargo run
+```
+
+Then you can start sending requests to the server using `redis-cli`:
+
+```shell
+redis-cli ping
+```
+
+> [!NOTE]  
+> You get `redis-cli` installed when you [install redis](https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/).
