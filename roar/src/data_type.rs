@@ -14,6 +14,7 @@ impl DataType {
             DataType::SimpleString(content) => format!("+{content}\r\n"),
             DataType::BulkString(content) => format!("${}\r\n{}\r\n", content.len(), content),
             DataType::Null => format!("$-1\r\n"),
+            DataType::Integer(content) => format!(":{}\r\n", content),
             _ => todo!(),
         };
         serialized_data

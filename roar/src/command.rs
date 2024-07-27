@@ -10,6 +10,7 @@ pub enum Command {
     Echo,
     Set,
     Get,
+    Exists,
 }
 
 impl From<String> for Command {
@@ -19,6 +20,7 @@ impl From<String> for Command {
             "echo" => Command::Echo,
             "set" => Command::Set,
             "get" => Command::Get,
+            "exists" => Command::Exists,
             _ => todo!(),
         }
     }
@@ -43,6 +45,10 @@ impl Command {
             Command::Get => match dict.lock().unwrap().get(arguments[0].inner()) {
                 Some(entry) => DataType::BulkString(entry.to_string()),
                 None => DataType::Null,
+            },
+            Command::Exists => match dict.lock().unwrap().contains_key(arguments[0].inner()) {
+                true => DataType::Integer(1),
+                false => DataType::Integer(0),
             },
         }
     }

@@ -6,15 +6,11 @@ use std::sync::{Arc, Mutex};
 
 pub struct Server {
     addr: SocketAddrV4,
-    // dict: Rc<HashMap<String, String>>,
 }
 
 impl Server {
     pub fn new(addr: SocketAddrV4) -> Self {
-        Self {
-            addr,
-            // dict: Rc::new(HashMap::new()),
-        }
+        Self { addr }
     }
 
     pub fn listen_and_serve(self) {
