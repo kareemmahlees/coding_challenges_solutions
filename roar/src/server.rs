@@ -1,5 +1,4 @@
-use crate::deserializer::DataType;
-use crate::DeSerializer;
+use crate::{Command, DataType, DeSerializer};
 use std::io::{Read, Write};
 use std::net::{SocketAddrV4, TcpListener, TcpStream};
 
@@ -32,14 +31,19 @@ fn handle_client(mut stream: TcpStream) {
     let mut deser = DeSerializer::new(&buffer[..size]);
 
     let data_types = deser.deserialize();
+    // NOTE: sorry for this ugly bit but I just realized
+    // that redis-cli *Always* sends commands in this format:
+    // Array(BulkString(command),BulkString(other_data)).
     match &data_types[0] {
         DataType::Array(data) => match &data[0] {
-            DataType::BulkString(content) => {
-                match content.to_lowercase().as_str() {
-                    "ping" => stream.write_all("$4\r\nPONG\r\n".as_bytes()).unwrap(),
-                    // "echo" => stream.write_all("")
-                    _ => {}
+            DataType::BulkString(command) => {
+                let response_data_type = match command.to_lowercase().into() {
+                    Command::Ping => DataType::SimpleString("PONG".to_string()),
+                    Command::Echo => DataType::BulkString(data[1].inner().to_string()),
                 };
+                stream
+                    .write_all(response_data_type.serialize().as_bytes())
+                    .unwrap();
             }
             _ => {}
         },

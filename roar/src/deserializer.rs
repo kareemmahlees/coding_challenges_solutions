@@ -1,16 +1,6 @@
+use crate::DataType;
 use std::io::{BufRead, ErrorKind};
 use std::str::from_utf8;
-use std::usize;
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum DataType {
-    SimpleString(String),
-    Error(String),
-    Integer(usize),
-    BulkString(String),
-    Array(Vec<DataType>),
-    Null,
-}
 
 pub(crate) struct DeSerializer<'a> {
     payload: &'a [u8],
