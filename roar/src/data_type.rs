@@ -2,7 +2,7 @@
 pub enum DataType {
     SimpleString(String),
     Error(String),
-    Integer(usize),
+    Integer(i64),
     BulkString(String),
     Array(Vec<DataType>),
     Null,
@@ -15,6 +15,7 @@ impl DataType {
             DataType::BulkString(content) => format!("${}\r\n{}\r\n", content.len(), content),
             DataType::Null => format!("$-1\r\n"),
             DataType::Integer(content) => format!(":{}\r\n", content),
+            DataType::Error(content) => format!("-{}\r\n", content),
             _ => todo!(),
         };
         serialized_data

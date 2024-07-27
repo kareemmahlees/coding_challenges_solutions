@@ -27,7 +27,7 @@ impl<'a> DeSerializer<'a> {
         let content = from_utf8(&chunk[1..]).unwrap().to_string();
         match mark {
             b'+' => DataType::SimpleString(content),
-            b':' => DataType::Integer(content.parse::<usize>().unwrap()),
+            b':' => DataType::Integer(content.parse::<i64>().unwrap()),
             b'-' => DataType::Error(content),
             b'$' if content == "-1" => DataType::Null,
             b'*' if content == "-1" => DataType::Null,

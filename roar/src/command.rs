@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
-    usize,
 };
 
 use crate::DataType;
@@ -14,6 +13,7 @@ pub enum Command {
     Exists,
     Del,
     Incr,
+    Decr,
 }
 
 impl From<String> for Command {
@@ -26,6 +26,7 @@ impl From<String> for Command {
             "exists" => Command::Exists,
             "del" => Command::Del,
             "incr" => Command::Incr,
+            "decr" => Command::Decr,
             _ => todo!(),
         }
     }
@@ -68,14 +69,28 @@ impl Command {
             Command::Incr => {
                 let key = arguments[0].inner();
                 let value = dict.entry(key.to_string()).or_insert("0".to_string());
-                match value.parse::<usize>() {
+                match value.parse::<i64>() {
                     Ok(parsed_value) => {
                         let new_value = parsed_value + 1;
                         dict.insert(key.to_string(), new_value.to_string());
                         DataType::Integer(new_value)
                     }
                     Err(_) => {
-                        DataType::Error("Invalid data type, cannot be increamented".to_string())
+                        DataType::Error("value is not an integer or out of range".to_string())
+                    }
+                }
+            }
+            Command::Decr => {
+                let key = arguments[0].inner();
+                let value = dict.entry(key.to_string()).or_insert("0".to_string());
+                match value.parse::<i64>() {
+                    Ok(parsed_value) => {
+                        let new_value = parsed_value - 1;
+                        dict.insert(key.to_string(), new_value.to_string());
+                        DataType::Integer(new_value)
+                    }
+                    Err(_) => {
+                        DataType::Error("value is not an integer or out of range".to_string())
                     }
                 }
             }
