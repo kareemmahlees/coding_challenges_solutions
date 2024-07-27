@@ -14,6 +14,8 @@ pub enum Command {
     Del,
     Incr,
     Decr,
+    Rpush,
+    Lpush,
 }
 
 impl From<String> for Command {
@@ -27,6 +29,8 @@ impl From<String> for Command {
             "del" => Command::Del,
             "incr" => Command::Incr,
             "decr" => Command::Decr,
+            "rpush" => Command::Rpush,
+            "lpush" => Command::Lpush,
             _ => todo!(),
         }
     }
@@ -37,6 +41,7 @@ impl Command {
         command: &String,
         arguments: &[DataType],
         dict: Arc<Mutex<HashMap<String, String>>>,
+        dict_vec: Arc<Mutex<HashMap<String, Vec<String>>>>,
     ) -> DataType {
         let mut dict = dict.lock().unwrap();
         match command.to_lowercase().into() {
@@ -93,6 +98,32 @@ impl Command {
                         DataType::Error("value is not an integer or out of range".to_string())
                     }
                 }
+            }
+            Command::Rpush => {
+                if dict.get(arguments[0].inner()).is_some() {
+                    return DataType::Error("value is not an array".to_string());
+                }
+                let mut dict_vec = dict_vec.lock().unwrap();
+                let array = dict_vec
+                    .entry(arguments[0].inner().to_string())
+                    .or_default();
+                for arg in arguments[1..].iter() {
+                    array.push(arg.inner().to_string());
+                }
+                DataType::Integer(array.len() as i64)
+            }
+            Command::Lpush => {
+                if dict.get(arguments[0].inner()).is_some() {
+                    return DataType::Error("value is not an array".to_string());
+                }
+                let mut dict_vec = dict_vec.lock().unwrap();
+                let array = dict_vec
+                    .entry(arguments[0].inner().to_string())
+                    .or_default();
+                for arg in arguments[1..].iter() {
+                    array.insert(0, arg.inner().to_string());
+                }
+                DataType::Integer(array.len() as i64)
             }
         }
     }
