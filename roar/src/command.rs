@@ -11,6 +11,7 @@ pub enum Command {
     Set,
     Get,
     Exists,
+    Del,
 }
 
 impl From<String> for Command {
@@ -21,6 +22,7 @@ impl From<String> for Command {
             "set" => Command::Set,
             "get" => Command::Get,
             "exists" => Command::Exists,
+            "del" => Command::Del,
             _ => todo!(),
         }
     }
@@ -50,6 +52,15 @@ impl Command {
                 true => DataType::Integer(1),
                 false => DataType::Integer(0),
             },
+            Command::Del => {
+                let mut num_of_deleted_entries = 0;
+                for key in arguments {
+                    if dict.lock().unwrap().remove_entry(key.inner()).is_some() {
+                        num_of_deleted_entries += 1;
+                    };
+                }
+                DataType::Integer(num_of_deleted_entries)
+            }
         }
     }
 }
