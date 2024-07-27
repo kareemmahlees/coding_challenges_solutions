@@ -13,6 +13,7 @@ impl DataType {
         let serialized_data = match self {
             DataType::SimpleString(content) => format!("+{content}\r\n"),
             DataType::BulkString(content) => format!("${}\r\n{}\r\n", content.len(), content),
+            DataType::Null => format!("$-1\r\n"),
             _ => todo!(),
         };
         serialized_data
@@ -22,6 +23,7 @@ impl DataType {
         let inner = match self {
             DataType::SimpleString(content) => content,
             DataType::BulkString(content) => content,
+            DataType::Error(content) => content,
             _ => todo!(),
         };
         inner
