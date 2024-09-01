@@ -1,0 +1,7 @@
+[project]
+name = "purl"
+version = "0.1.0"
+description = "Curl, but more beatifull"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
