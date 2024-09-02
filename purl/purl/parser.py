@@ -6,6 +6,10 @@ from click import ClickException
 
 
 class Protocol(StrEnum):
+    """
+    Supported protocols by `perl`
+    """
+
     HTTP = "http"
     HTTPS = "https"
     UNSUPPORTED = "unsupported"
@@ -13,22 +17,26 @@ class Protocol(StrEnum):
 
 @dataclass
 class ParsedURL:
+    """
+    Data extracted from the plane string url.
+    """
+
     protocol: Protocol
     host: str
     port: int | None
     path: str | None
     query_params: str | None
-    method: str = "GET"
 
     def __post_init__(self):
         if self.port is None:
             self.port = 80 if self.protocol == "http" else 443
 
-    def __str__(self) -> str:
-        return "from str"
-
 
 class Parser:
+    """
+    Class responsible for extracting data from urls, such as `protocol`, `host`, etc.
+    """
+
     @classmethod
     def parse(cls, url: str) -> ParsedURL:
         reg = re.search(
