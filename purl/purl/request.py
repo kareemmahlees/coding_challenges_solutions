@@ -15,6 +15,7 @@ class RequestMethod(StrEnum):
     GET = "GET"
     DELETE = "DELETE"
     POST = "POST"
+    PUT = "PUT"
 
 
 @dataclass
