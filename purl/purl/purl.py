@@ -1,18 +1,22 @@
 from parser import Parser
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
-from request import RequestBuilder
+from request import RequestBuilder, RequestMethod
 from rich import print as pretty_print
 
 app = typer.Typer()
 
 
 @app.command()
-def main(url: str, verbose: Annotated[Optional[bool], typer.Option()] = False):
+def main(
+    url: str,
+    verbose: Annotated[bool, typer.Option()] = False,
+    method: Annotated[RequestMethod, typer.Option("-X")] = RequestMethod.GET,
+):
     parsed = Parser.parse(url)
 
-    builder = RequestBuilder(parsed, {"Accept": "*/*", "Connection": "close"})
+    builder = RequestBuilder(parsed, method, {"Accept": "*/*", "Connection": "close"})
 
     res = builder.run()
 

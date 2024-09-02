@@ -10,13 +10,14 @@ from rich import print
 
 class RequestMethod(StrEnum):
     GET = "GET"
+    DELETE = "DELETE"
 
 
 @dataclass
 class RequestBuilder:
     parsed_data: ParsedURL
+    method: RequestMethod
     headers: Dict[str, str]
-    method: RequestMethod = RequestMethod.GET
 
     def contruct_request_url(self) -> str:
         req_url = f"{self.parsed_data.protocol}://{self.parsed_data.host}:{self.parsed_data.port}"
