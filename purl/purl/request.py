@@ -28,14 +28,14 @@ class RequestBuilder:
         return req_url
 
     def run(self) -> Response:
-        print(f"connection to {self.parsed_data.host}")
+        print(f"< connection to {self.parsed_data.host}")
         print(
-            f"Sending request GET {self.parsed_data.path} {self.parsed_data.protocol.value.upper()}/1.1"
+            f"< Sending request GET {self.parsed_data.path} {self.parsed_data.protocol.value.upper()}/1.1"
         )
-        print(f"Host: {self.parsed_data.host}")
-        print("Accept: */*")
-        print("Connection: close")
-        print("")
+        print(f"< Host: {self.parsed_data.host}")
+        print("< Accept: */*")
+        print("< Connection: close")
+        print("< ")
 
         res = requests.request(
             self.method,
