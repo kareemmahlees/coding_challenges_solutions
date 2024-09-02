@@ -5,9 +5,6 @@ from enum import StrEnum
 from click import ClickException
 
 
-class ParserError(ClickException): ...
-
-
 class Protocol(StrEnum):
     HTTP = "http"
     HTTPS = "https"
@@ -39,7 +36,7 @@ class Parser:
         )
 
         if reg is None:
-            raise ParserError("Invalid URL format")
+            raise ClickException("Invalid URL format")
 
         protocol: Protocol = Protocol.UNSUPPORTED
 
