@@ -1,18 +1,24 @@
 from parser import Parser
 
 import typer
-from rich import print
+from request import RequestBuilder
+from rich import print as pretty_print
 
 app = typer.Typer()
 
 
 @app.command()
 def main(url: str):
-    res = Parser.parse(url)
-    print(f"connection to {res.host}")
-    print(f"Sending request {res.method} {res.path} {res.protocol.value.upper()}/1.1")
-    print(f"Host: {res.host}")
-    print("Accept: */*")
+    parsed = Parser.parse(url)
+
+    builder = RequestBuilder(parsed, {"Accept": "*/*", "Connection": "close"})
+
+    res = builder.run()
+
+    for k, v in res.headers.items():
+        pretty_print(f"[bold green]{k}[/bold green]: {v}")
+
+    pretty_print(res.text)
 
 
 if __name__ == "__main__":

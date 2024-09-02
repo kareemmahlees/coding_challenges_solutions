@@ -1,7 +1,6 @@
 import re
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import List
 
 from click import ClickException
 
@@ -21,7 +20,7 @@ class ParsedURL:
     host: str
     port: int | None
     path: str | None
-    query_params: List[str] | None
+    query_params: str | None
     method: str = "GET"
 
     def __post_init__(self):
@@ -54,8 +53,4 @@ class Parser:
         if port is not None:
             port = int(port[1:])
 
-        query_params = reg.group(5)
-        if query_params is not None:
-            query_params = query_params[1:].split("&")
-
-        return ParsedURL(protocol, reg.group(2), port, reg.group(4), query_params)
+        return ParsedURL(protocol, reg.group(2), port, reg.group(4), reg.group(5))
