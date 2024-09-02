@@ -23,7 +23,7 @@ def main(
     if headers:
         builder.append_headers(headers)
 
-    res = builder.run()
+    res = builder.run(verbose)
 
     if verbose:
         for k, v in res.headers.items():
