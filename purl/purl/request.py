@@ -46,22 +46,28 @@ class RequestBuilder:
 
         return req_url
 
-    def run(self, verbose: bool) -> Response:
+    def run(self, verbose: bool, offline: bool):
         if verbose:
             print("")
             print(f"< connection to {self.parsed_data.host}")
             print(
                 f"< Sending request GET {self.parsed_data.path} {self.parsed_data.protocol.value.upper()}/1.1"
             )
-            print(f"< Host: {self.parsed_data.host}")
+            pretty_print(f"< [bold blue]Host[/bold blue]: {self.parsed_data.host}")
             for k, v in self.headers.items():
-                pretty_print(f"< [bold green]{k}[/bold green]: {v}")
+                pretty_print(f"< [bold blue]{k}[/bold blue]: {v}")
             print("< ")
 
-        res = requests.request(
-            self.method,
-            self.contruct_request_url(),
-            data=self.data,
-            headers=self.headers,
-        )
-        return res
+        if not offline:
+            res = requests.request(
+                self.method,
+                self.contruct_request_url(),
+                data=self.data,
+                headers=self.headers,
+            )
+
+            if verbose:
+                for k, v in res.headers.items():
+                    pretty_print(f"> [bold green]{k}[/bold green]: {v}")
+
+            pretty_print(res.text)

@@ -3,7 +3,6 @@ from typing import Annotated, List, Optional
 
 import typer
 from request import RequestBuilder, RequestMethod
-from rich import print as pretty_print
 
 app = typer.Typer()
 
@@ -13,8 +12,9 @@ def main(
     url: str,
     data: Annotated[str, typer.Option("--data", "-d")],
     headers: Annotated[Optional[List[str]], typer.Option("--header", "-H")],
-    verbose: Annotated[bool, typer.Option()] = False,
+    verbose: Annotated[bool, typer.Option()] = True,
     method: Annotated[RequestMethod, typer.Option("-X")] = RequestMethod.GET,
+    offline: Annotated[bool, typer.Option()] = False,
 ):
     parsed = Parser.parse(url)
 
@@ -23,13 +23,7 @@ def main(
     if headers:
         builder.append_headers(headers)
 
-    res = builder.run(verbose)
-
-    if verbose:
-        for k, v in res.headers.items():
-            pretty_print(f"> [bold green]{k}[/bold green]: {v}")
-
-    pretty_print(res.text)
+    builder.run(verbose, offline)
 
 
 if __name__ == "__main__":
