@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+
 from purl.parser import BaseParser
 
 from click import ClickException
@@ -29,6 +30,30 @@ class UrlParser(BaseParser):
     """
 
     @classmethod
+    def try_localhost_parsing(cls, url: str) -> ParsedURL:
+        localhost_reg = re.match(r"^(:[0-9]+)?(/[a-zA-Z0-9/]*)(\?.+)?", url)
+
+        if localhost_reg is None:
+            raise ClickException("Invalid URL format")
+
+        port = localhost_reg.group(1)
+        if port is not None:
+            port = cls.normalize_port(port)
+
+        return ParsedURL(
+            Protocol.HTTP,
+            "localhost",
+            port,
+            localhost_reg.group(2),
+            localhost_reg.group(3),
+        )
+
+    @classmethod
+    def normalize_port(cls, port: str) -> int:
+        normalized_port = int(port[1:])
+        return normalized_port
+
+    @classmethod
     def parse(cls, url: str) -> ParsedURL:
         """
         Extracts usefull data from the url (e.g protocol, host, etc.)
@@ -43,7 +68,8 @@ class UrlParser(BaseParser):
         )
 
         if reg is None:
-            raise ClickException("Invalid URL format")
+            parsed_url = cls.try_localhost_parsing(url)
+            return parsed_url
 
         protocol: Protocol = Protocol.UNSUPPORTED
 
@@ -55,6 +81,6 @@ class UrlParser(BaseParser):
 
         port = reg.group(3)
         if port is not None:
-            port = int(port[1:])
+            port = cls.normalize_port(port)
 
         return ParsedURL(protocol, reg.group(2), port, reg.group(4), reg.group(5))
