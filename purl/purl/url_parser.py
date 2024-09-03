@@ -30,6 +30,14 @@ class UrlParser(BaseParser):
 
     @classmethod
     def parse(cls, url: str) -> ParsedURL:
+        """
+        Extracts usefull data from the url (e.g protocol, host, etc.)
+
+        Args:
+            url: url passed by the user.
+        Returns:
+            `ParsedURL`: Data extracted from the url in a structured form.
+        """
         reg = re.search(
             r"(http|https)://([a-zA-Z0-9.]+)(:[0-9]+)?([a-zA-Z0-9./]+)?(\?.*)?", url
         )

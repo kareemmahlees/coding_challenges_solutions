@@ -7,6 +7,10 @@ from constants import DEFAULT_HEADERS
 
 @dataclass
 class RequestItems:
+    """
+    Class representing data parsed out of items passed from the user.
+    """
+
     headers: Dict[str, str]
     data: Dict[str, str]
 
@@ -23,6 +27,14 @@ class RequestItems:
 class ItemsParser(BaseParser):
     @classmethod
     def parse(cls, items: List[str] | None) -> RequestItems:
+        """
+        Extracts headers and json/form data from items.
+
+        Args:
+            items: items passed from the CLI.
+        Returns:
+            `RequestItems`: Parsed items in the form of strucutred data.
+        """
         headers = {}
         data = {}
 

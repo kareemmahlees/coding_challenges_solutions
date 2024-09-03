@@ -23,6 +23,10 @@ class Protocol(StrEnum):
 
 
 class ContentType(StrEnum):
+    """
+    Utility enum representing major `Content-type` headers.
+    """
+
     Json = "application/json"
     Text = "text/plain"
     Html = "text/html"
