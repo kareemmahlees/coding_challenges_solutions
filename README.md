@@ -12,3 +12,4 @@ Feel free to ask questions, suggest better solutions, or contribute to the solut
 | [comprust](./comprust/README.md)           | Compression tool based on the huffman encoding algorithm, compresses files by 60%.    | Rust   |
 | [load-balancer](./load-balancer/README.md) | Concurrent, layer 7, simple Load Balancer with up/down server watcher.                | Golang |
 | [roar](./roar/README.md)                   | Redis server with full support for the RESP protocol and 10 different redis commands. | Rust   |
+| [purl](./purl/README.md)                   | Simply `Curl`, but more powerful, inspired by [httpie](https://httpie.io/cli)         | Python |
