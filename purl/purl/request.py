@@ -1,23 +1,13 @@
-import re
-from dataclasses import dataclass, field
-from enum import StrEnum
-from parser import ParsedURL
-from typing import Dict, List, Self
+from dataclasses import dataclass
 
 import requests
-from click import ClickException
+from enums import RequestMethod
+from items_parser import RequestItems
 from rich import print as pretty_print, print_json
-
-
-class RequestMethod(StrEnum):
-    """
-    Enum represeting supported http methods by `purl`.
-    """
-
-    GET = "GET"
-    DELETE = "DELETE"
-    POST = "POST"
-    PUT = "PUT"
+from rich.console import Console
+from rich.syntax import Syntax
+from url_parser import ParsedURL
+from enums import ContentType
 
 
 @dataclass
@@ -26,35 +16,9 @@ class RequestBuilder:
     A builder that handles request related operations, including running the request.
     """
 
-    parsed_data: ParsedURL
+    parsed_url: ParsedURL
     method: RequestMethod
-    data: str | None
-    """
-    Data sent as the body of a `POST` or `PUT` rquest. 
-    """
-    headers: Dict[str, str] = field(
-        default_factory=lambda: {"Accept": "*/*", "Connection": "close"}
-    )
-
-    def append_headers(self, headers: List[str]) -> Self:
-        """
-        Extend the default headers with a list of headers passed from the user.
-
-        Args:
-            headers: list of headers passed from the user calling the `--header` flag multible times.
-        Returns:
-            The same object with mutated headers.
-        Raises:
-            `ClickException`: If headers are mallformed.
-        """
-        for h in headers:
-            header = re.match(r"(.+):\s+(.+)", h)
-            if header is None:
-                raise ClickException("Invalid header format")
-
-            self.headers.update({header.group(1): header.group(2).strip(" ")})
-
-        return self
+    items: RequestItems
 
     def contruct_request_url(self) -> str:
         """
@@ -63,11 +27,11 @@ class RequestBuilder:
         Returns:
             request_url
         """
-        req_url = f"{self.parsed_data.protocol}://{self.parsed_data.host}:{self.parsed_data.port}"
-        if self.parsed_data.path:
-            req_url += self.parsed_data.path
-        if self.parsed_data.query_params:
-            req_url += self.parsed_data.query_params
+        req_url = f"{self.parsed_url.protocol}://{self.parsed_url.host}:{self.parsed_url.port}"
+        if self.parsed_url.path:
+            req_url += self.parsed_url.path
+        if self.parsed_url.query_params:
+            req_url += self.parsed_url.query_params
 
         return req_url
 
@@ -81,12 +45,13 @@ class RequestBuilder:
         """
         if verbose or offline:
             pretty_print(
-                f"[bold bright_green]{self.method}[/] {self.parsed_data.path} {self.parsed_data.protocol}/1.1"
+                f"[bold bright_green]{self.method}[/] {self.parsed_url.path} {self.parsed_url.protocol}/1.1"
             )
-            for k, v in self.headers.items():
+            # Print outgoing headers
+            for k, v in self.items.headers.items():
                 pretty_print(f"[bold green]{k}[/]: {v}")
             print("")
-            print_json(self.data)
+            print_json(data=self.items.data)
             print("\n")
 
             if offline:
@@ -95,13 +60,29 @@ class RequestBuilder:
         res = requests.request(
             self.method,
             self.contruct_request_url(),
-            data=self.data,
-            headers=self.headers,
+            json=self.items.data
+            if self.items.headers["Content-type"] == "application/json"
+            else None,
+            # TODO: support form data
+            # data=self.items.data,
+            headers=self.items.headers,
         )
 
-        pretty_print(f"[bold blue]{self.parsed_data.protocol}/1.1 {res.status_code}[/]")
+        # Print upcomming headers
+        pretty_print(f"[bold blue]{self.parsed_url.protocol}/1.1 {res.status_code}[/]")
         for k, v in res.headers.items():
             pretty_print(f"[bold green]{k}[/]: {v}")
 
         print("")
-        print_json(res.text, indent=3)
+
+        match res.headers["Content-type"]:
+            case ContentType.Json:
+                print_json(res.text, indent=3)
+
+            case ContentType.Text:
+                print(res.text)
+
+            case ContentType.Html:
+                console = Console()
+                syntax = Syntax(res.text, "html")
+                console.print(syntax)

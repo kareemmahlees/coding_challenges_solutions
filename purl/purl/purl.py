@@ -1,8 +1,10 @@
-from parser import UrlParser
 from typing import Annotated, List, Optional
 
 import typer
-from request import RequestBuilder, RequestMethod
+from enums import RequestMethod
+from items_parser import ItemsParser
+from request import RequestBuilder
+from url_parser import UrlParser
 
 app = typer.Typer()
 
@@ -11,17 +13,15 @@ app = typer.Typer()
 def main(
     method: Annotated[RequestMethod, typer.Argument()] = RequestMethod.GET,
     url: str = typer.Argument(),
-    headers: Annotated[Optional[List[str]], typer.Option("--header", "-H")] = None,
-    data: Annotated[Optional[str], typer.Option("--data", "-d")] = None,
+    items: Annotated[Optional[List[str]], typer.Argument()] = None,
     verbose: Annotated[bool, typer.Option()] = False,
     offline: Annotated[bool, typer.Option()] = False,
 ):
-    parsed = UrlParser.parse(url)
+    parsed_url = UrlParser.parse(url)
 
-    builder = RequestBuilder(parsed, method, data)
+    parsed_items = ItemsParser.parse(items)
 
-    if headers:
-        builder.append_headers(headers)
+    builder = RequestBuilder(parsed_url, method, parsed_items)
 
     builder.run(verbose, offline)
 
