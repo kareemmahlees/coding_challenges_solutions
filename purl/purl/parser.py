@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -32,7 +33,13 @@ class ParsedURL:
             self.port = 80 if self.protocol == "http" else 443
 
 
-class Parser:
+class BaseParser(ABC):
+    @classmethod
+    @abstractmethod
+    def parse(cls, *args, **kwargs) -> object: ...
+
+
+class UrlParser(BaseParser):
     """
     Class responsible for extracting data from urls, such as `protocol`, `host`, etc.
     """
@@ -59,3 +66,6 @@ class Parser:
             port = int(port[1:])
 
         return ParsedURL(protocol, reg.group(2), port, reg.group(4), reg.group(5))
+
+
+class ItemsParser(BaseParser): ...

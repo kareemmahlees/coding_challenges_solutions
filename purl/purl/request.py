@@ -28,7 +28,7 @@ class RequestBuilder:
 
     parsed_data: ParsedURL
     method: RequestMethod
-    data: str
+    data: str | None
     """
     Data sent as the body of a `POST` or `PUT` rquest. 
     """
@@ -83,7 +83,7 @@ class RequestBuilder:
             print("")
             print(f"< connection to {self.parsed_data.host}")
             print(
-                f"< Sending request GET {self.parsed_data.path} {self.parsed_data.protocol.value.upper()}/1.1"
+                f"< Sending request {self.method} {self.parsed_data.path} {self.parsed_data.protocol.value.upper()}/1.1"
             )
             pretty_print(f"< [bold blue]Host[/bold blue]: {self.parsed_data.host}")
             for k, v in self.headers.items():

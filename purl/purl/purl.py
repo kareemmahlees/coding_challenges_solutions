@@ -1,4 +1,4 @@
-from parser import Parser
+from parser import UrlParser
 from typing import Annotated, List, Optional
 
 import typer
@@ -9,14 +9,14 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    url: str,
-    data: Annotated[str, typer.Option("--data", "-d")],
-    headers: Annotated[Optional[List[str]], typer.Option("--header", "-H")],
+    method: Annotated[RequestMethod, typer.Argument()] = RequestMethod.GET,
+    url: str = typer.Argument(),
+    headers: Annotated[Optional[List[str]], typer.Option("--header", "-H")] = None,
+    data: Annotated[Optional[str], typer.Option("--data", "-d")] = None,
     verbose: Annotated[bool, typer.Option()] = True,
-    method: Annotated[RequestMethod, typer.Option("-X")] = RequestMethod.GET,
     offline: Annotated[bool, typer.Option()] = False,
 ):
-    parsed = Parser.parse(url)
+    parsed = UrlParser.parse(url)
 
     builder = RequestBuilder(parsed, method, data)
 
