@@ -1,8 +1,11 @@
 import re
 from dataclasses import dataclass
-from purl.parser import BaseParser
 from typing import Dict, List
+
+from click import ClickException
+
 from purl.constants import DEFAULT_HEADERS
+from purl.parser import BaseParser
 
 
 @dataclass
@@ -53,6 +56,8 @@ class ItemsParser(BaseParser):
             if json_reg:
                 data.update({json_reg[1]: json_reg[2]})
                 continue
+
+            raise ClickException(f"Invalid item format: {item}")
 
         return RequestItems(
             headers,
