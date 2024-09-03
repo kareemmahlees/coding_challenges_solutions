@@ -20,7 +20,7 @@ class ParsedURL:
 
     def __post_init__(self):
         if self.port is None:
-            self.port = 80 if self.protocol == "http" else 443
+            self.port = 80 if self.protocol == Protocol.HTTP else 443
 
 
 class UrlParser(BaseParser):

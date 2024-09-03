@@ -18,8 +18,8 @@ class Protocol(StrEnum):
     """
 
     HTTP = "HTTP"
-    HTTPS = "HTTPs"
-    UNSUPPORTED = "uNSUPported"
+    HTTPS = "HTTPS"
+    UNSUPPORTED = "UNSUPPORTED "
 
 
 class ContentType(StrEnum):
