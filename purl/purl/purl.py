@@ -11,11 +11,12 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    method: Annotated[RequestMethod, typer.Argument()] = RequestMethod.GET,
     url: str = typer.Argument(),
+    method: Annotated[RequestMethod, typer.Argument()] = RequestMethod.GET,
     items: Annotated[Optional[List[str]], typer.Argument()] = None,
     verbose: Annotated[bool, typer.Option()] = False,
     offline: Annotated[bool, typer.Option()] = False,
+    form: Annotated[bool, typer.Option("--form", "-f")] = False,
 ):
     parsed_url = UrlParser.parse(url)
 
@@ -23,7 +24,7 @@ def main(
 
     builder = RequestBuilder(parsed_url, method, parsed_items)
 
-    builder.run(verbose, offline)
+    builder.run(verbose, offline, form)
 
 
 if __name__ == "__main__":

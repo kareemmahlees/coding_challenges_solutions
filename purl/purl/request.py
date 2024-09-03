@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
 import requests
-from enums import RequestMethod
+from enums import ContentType, RequestMethod
 from items_parser import RequestItems
-from rich import print as pretty_print, print_json
+from rich import print as pretty_print
+from rich import print_json
 from rich.console import Console
 from rich.syntax import Syntax
 from url_parser import ParsedURL
-from enums import ContentType
 
 
 @dataclass
@@ -35,48 +35,28 @@ class RequestBuilder:
 
         return req_url
 
-    def run(self, verbose: bool, offline: bool):
-        """
-        Execute the constructed request.
-
-        Args:
-            verbose: wiether to print extra headers info to the terminal.
-            offlien: don't execute the request, just show me what will be sent.
-        """
-        if verbose or offline:
-            pretty_print(
-                f"[bold bright_green]{self.method}[/] {self.parsed_url.path} {self.parsed_url.protocol}/1.1"
-            )
-            # Print outgoing headers
-            for k, v in self.items.headers.items():
-                pretty_print(f"[bold green]{k}[/]: {v}")
-            print("")
-            print_json(data=self.items.data)
-            print("\n")
-
-            if offline:
-                return
-
-        res = requests.request(
-            self.method,
-            self.contruct_request_url(),
-            json=self.items.data
-            if self.items.headers["Content-type"] == "application/json"
-            else None,
-            # TODO: support form data
-            # data=self.items.data,
-            headers=self.items.headers,
+    def print_outgoing_request(self):
+        pretty_print(
+            f"[bold bright_green]{self.method}[/] {self.parsed_url.path} {self.parsed_url.protocol}/1.1"
         )
+        for k, v in self.items.headers.items():
+            pretty_print(f"[bold green]{k}[/]: ", end="")
+            print(f"{v}")
 
-        # Print upcomming headers
+        print("")
+        print_json(data=self.items.data)
+        print("\n")
+
+    def print_incoming_response(self, res: requests.Response):
         pretty_print(f"[bold blue]{self.parsed_url.protocol}/1.1 {res.status_code}[/]")
         for k, v in res.headers.items():
-            pretty_print(f"[bold green]{k}[/]: {v}")
+            pretty_print(f"[bold green]{k}[/]: ", end="")
+            print(f"{v}")
 
         print("")
 
         match res.headers["Content-type"]:
-            case ContentType.Json:
+            case t if ContentType.Json in t:
                 print_json(res.text, indent=3)
 
             case ContentType.Text:
@@ -86,3 +66,32 @@ class RequestBuilder:
                 console = Console()
                 syntax = Syntax(res.text, "html")
                 console.print(syntax)
+
+    def run(self, verbose: bool, offline: bool, form: bool):
+        """
+        Execute the constructed request.
+
+        Args:
+            verbose: wiether to print extra headers info to the terminal.
+            offlien: don't execute the request, just show me what will be sent.
+        """
+        if form:
+            self.items.headers["Content-type"] = ContentType.Form
+
+        if verbose or offline:
+            self.print_outgoing_request()
+
+            if offline:
+                return
+
+        res = requests.request(
+            self.method,
+            self.contruct_request_url(),
+            json=self.items.data
+            if ContentType.Json in self.items.headers["Content-type"]
+            else None,
+            data=self.items.data if form else None,
+            headers=self.items.headers,
+        )
+
+        self.print_incoming_response(res)

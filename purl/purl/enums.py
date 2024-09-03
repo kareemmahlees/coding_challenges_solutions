@@ -26,3 +26,4 @@ class ContentType(StrEnum):
     Json = "application/json"
     Text = "text/plain"
     Html = "text/html"
+    Form = "application/x-www-form-urlencoded"
