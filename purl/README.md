@@ -11,13 +11,13 @@ Here is an example of a request being sent with `Curl` vs `Purl`:
 **Curl**
 
 ```sh
-curl -X POST http://eu.httpbin.org/post -d '{"key":"value"}' -H "Content-type:application/json" -H "Cache-Control:no-cache"
+curl -X POST http://localhost:5000/post -d '{"key":"value"}' -H "Content-type:application/json"
 ```
 
 **Purl**
 
 ```sh
-purl http://eu.httpbin.org/post POST Cache-Control:no-cache key=value
+purl :5000/post POST key=value
 ```
 
 ## How to use
@@ -41,6 +41,34 @@ pytest -vv
 ```
 
 ## Overview
+
+### Usage
+
+```sh
+purl [OPTIONS] URL [METHOD] [ITEMS]...
+```
+
+### Localhost friendly
+
+Purl knows your needs as a developer, and tries to make it easier for your. Purl has shortcuts for localhost that makes it more convenient to work locally.
+
+For example, `:3000` would expand to `http://localhost:3000`. If the port is omitted, then port `80` is assumed.
+
+```sh
+purl /foo
+
+Host: http://localhost:80/foo
+```
+
+```sh
+purl :3000/bar
+
+Host: http://localhost:3000/bar
+```
+
+### Methods
+
+Methods are passed as an optional argument after the url, all requests default to the `GET` method if no method is provided.
 
 ### Headers
 
