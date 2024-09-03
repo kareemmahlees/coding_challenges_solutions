@@ -6,7 +6,7 @@ from typing import Dict, List, Self
 
 import requests
 from click import ClickException
-from rich import print as pretty_print
+from rich import print as pretty_print, print_json
 
 
 class RequestMethod(StrEnum):
@@ -79,27 +79,29 @@ class RequestBuilder:
             verbose: wiether to print extra headers info to the terminal.
             offlien: don't execute the request, just show me what will be sent.
         """
-        if verbose:
-            print("")
-            print(f"< connection to {self.parsed_data.host}")
-            print(
-                f"< Sending request {self.method} {self.parsed_data.path} {self.parsed_data.protocol.value.upper()}/1.1"
+        if verbose or offline:
+            pretty_print(
+                f"[bold bright_green]{self.method}[/] {self.parsed_data.path} {self.parsed_data.protocol}/1.1"
             )
-            pretty_print(f"< [bold blue]Host[/bold blue]: {self.parsed_data.host}")
             for k, v in self.headers.items():
-                pretty_print(f"< [bold blue]{k}[/bold blue]: {v}")
-            print("< ")
+                pretty_print(f"[bold green]{k}[/]: {v}")
+            print("")
+            print_json(self.data)
+            print("\n")
 
-        if not offline:
-            res = requests.request(
-                self.method,
-                self.contruct_request_url(),
-                data=self.data,
-                headers=self.headers,
-            )
+            if offline:
+                return
 
-            if verbose:
-                for k, v in res.headers.items():
-                    pretty_print(f"> [bold green]{k}[/bold green]: {v}")
+        res = requests.request(
+            self.method,
+            self.contruct_request_url(),
+            data=self.data,
+            headers=self.headers,
+        )
 
-            pretty_print(res.text)
+        pretty_print(f"[bold blue]{self.parsed_data.protocol}/1.1 {res.status_code}[/]")
+        for k, v in res.headers.items():
+            pretty_print(f"[bold green]{k}[/]: {v}")
+
+        print("")
+        print_json(res.text, indent=3)

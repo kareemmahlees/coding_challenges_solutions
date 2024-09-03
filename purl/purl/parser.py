@@ -11,9 +11,9 @@ class Protocol(StrEnum):
     Supported protocols by `perl`
     """
 
-    HTTP = "http"
-    HTTPS = "https"
-    UNSUPPORTED = "unsupported"
+    HTTP = "HTTP"
+    HTTPS = "HTTPs"
+    UNSUPPORTED = "uNSUPported"
 
 
 @dataclass

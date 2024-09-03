@@ -13,7 +13,7 @@ def main(
     url: str = typer.Argument(),
     headers: Annotated[Optional[List[str]], typer.Option("--header", "-H")] = None,
     data: Annotated[Optional[str], typer.Option("--data", "-d")] = None,
-    verbose: Annotated[bool, typer.Option()] = True,
+    verbose: Annotated[bool, typer.Option()] = False,
     offline: Annotated[bool, typer.Option()] = False,
 ):
     parsed = UrlParser.parse(url)
