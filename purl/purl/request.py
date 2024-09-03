@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
 import requests
-from enums import ContentType, RequestMethod
-from items_parser import RequestItems
+from purl.enums import ContentType, RequestMethod
+from purl.items_parser import RequestItems
 from rich import print as pretty_print
 from rich import print_json
 from rich.console import Console
 from rich.syntax import Syntax
-from url_parser import ParsedURL
+from purl.url_parser import ParsedURL
 
 
 @dataclass

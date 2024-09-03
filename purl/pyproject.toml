@@ -1,10 +1,10 @@
 [project]
 name = "purl"
 version = "0.1.0"
-description = "Curl, but more beatifull"
+description = "Basically curl, but more powerfull."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "requests>=2.32.3",
-    "typer>=0.12.5",
-]
+dependencies = ["requests>=2.32.3", "typer>=0.12.5"]
+
+[tool.uv]
+dev-dependencies = ["pytest>=8.3.2"]

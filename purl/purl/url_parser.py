@@ -1,9 +1,9 @@
 import re
 from dataclasses import dataclass
-from parser import BaseParser
+from purl.parser import BaseParser
 
 from click import ClickException
-from enums import Protocol
+from purl.enums import Protocol
 
 
 @dataclass
@@ -14,9 +14,9 @@ class ParsedURL:
 
     protocol: Protocol
     host: str
-    port: int | None
-    path: str | None
-    query_params: str | None
+    port: int | None = None
+    path: str | None = None
+    query_params: str | None = None
 
     def __post_init__(self):
         if self.port is None:

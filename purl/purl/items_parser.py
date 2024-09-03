@@ -1,8 +1,8 @@
 import re
 from dataclasses import dataclass
-from parser import BaseParser
+from purl.parser import BaseParser
 from typing import Dict, List
-from constants import DEFAULT_HEADERS
+from purl.constants import DEFAULT_HEADERS
 
 
 @dataclass

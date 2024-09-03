@@ -1,10 +1,10 @@
 from typing import Annotated, List, Optional
 
 import typer
-from enums import RequestMethod
-from items_parser import ItemsParser
-from request import RequestBuilder
-from url_parser import UrlParser
+from purl.enums import RequestMethod
+from purl.items_parser import ItemsParser
+from purl.request import RequestBuilder
+from purl.url_parser import UrlParser
 
 app = typer.Typer()
 
