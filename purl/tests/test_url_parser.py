@@ -22,6 +22,15 @@ from purl.enums import Protocol
         ),
         ("github.com", None, True),
         ("http", None, True),
+        (":5000/foo", ParsedURL(Protocol.HTTP, "localhost", 5000, "/foo"), False),
+        ("/foo", ParsedURL(Protocol.HTTP, "localhost", 80, "/foo"), False),
+        (
+            "/foo?bar=bar",
+            ParsedURL(Protocol.HTTP, "localhost", 80, "/foo", "?bar=bar"),
+            False,
+        ),
+        ("/", ParsedURL(Protocol.HTTP, "localhost", 80, "/", None), False),
+        (":5000", None, True),
     ],
 )
 def test_parse_url(test_input: str, expected: ParsedURL, raises: bool):
